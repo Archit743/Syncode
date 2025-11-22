@@ -1,0 +1,27 @@
+body {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+
+  background-color: #151515;
+  color: white;
+  zoom: 1;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+
+html {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+}

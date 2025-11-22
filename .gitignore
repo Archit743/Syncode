@@ -1,0 +1,26 @@
+# Root .gitignore for Syncode workspace
+
+# Node
+node_modules/
+
+# Build
+dist/
+build/
+
+# Env
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+
+# Editor
+.vscode/
+.idea/
+
+# Docker
+**/Dockerfile
+
+# Keep examples
+!**/*.example
