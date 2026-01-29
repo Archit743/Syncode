@@ -3,6 +3,30 @@ import { fork, IPty } from 'node-pty';
 
 const SHELL = "bash";
 
+// Environment variables that should NOT be exposed to user terminal
+const SENSITIVE_ENV_KEYS = [
+    'AWS_ACCESS_KEY_ID',
+    'AWS_SECRET_ACCESS_KEY',
+    'S3_BUCKET',
+    'S3_ENDPOINT',
+    'AWS_SESSION_TOKEN',
+    'AWS_SECURITY_TOKEN',
+];
+
+// Create a sanitized environment for user terminals
+const getSanitizedEnv = (): NodeJS.ProcessEnv => {
+    const sanitizedEnv: NodeJS.ProcessEnv = {};
+    for (const [key, value] of Object.entries(process.env)) {
+        if (!SENSITIVE_ENV_KEYS.includes(key)) {
+            sanitizedEnv[key] = value;
+        }
+    }
+    // Add safe defaults for user terminal
+    sanitizedEnv['TERM'] = 'xterm-256color';
+    sanitizedEnv['HOME'] = '/workspace';
+    return sanitizedEnv;
+};
+
 export class TerminalManager {
     private sessions: { [id: string]: {terminal: IPty, replId: string;} } = {};
 
@@ -15,7 +39,8 @@ export class TerminalManager {
             cols: cols,
             rows: rows,
             name: 'xterm',
-            cwd: `/workspace`
+            cwd: `/workspace`,
+            env: getSanitizedEnv() // Use sanitized env without sensitive credentials
         });
     
         term.on('data', (data: string) => onData(data, term.pid));

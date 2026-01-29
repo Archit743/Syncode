@@ -9,16 +9,22 @@ import { Output } from './Output';
 import { TerminalComponent as Terminal } from './Terminal';
 import axios from 'axios';
 
-function useSocket(replId: string) {
+function useSocket(replId: string, enabled: boolean = true) {
     const [socket, setSocket] = useState<Socket | null>(null);
 
     useEffect(() => {
+        if (!enabled || !replId) {
+            return;
+        }
+
         const newSocket = io(`http://${replId}.iluvcats.me`, {
-            transports: ["websocket","polling"],
+            transports: ["websocket", "polling"],
             reconnection: true,
             reconnectionAttempts: 10,
-            reconnectionDelay: 1000,
+            reconnectionDelay: 2000,
+            reconnectionDelayMax: 5000,
             timeout: 20000,
+            autoConnect: true,
         });
         
         newSocket.on('connect', () => {
@@ -38,7 +44,7 @@ function useSocket(replId: string) {
         return () => {
             newSocket.disconnect();
         };
-    }, [replId]);
+    }, [replId, enabled]);
 
     return socket;
 }
@@ -359,6 +365,8 @@ export const CodingPagePostPodCreation = () => {
     };
 
     const onSelect = (file: File) => {
+        if (!file) return;
+        
         if (file.type === Type.DIRECTORY) {
             socket?.emit("fetchDir", file.path, (data: RemoteFile[]) => {
                 setFileStructure(prev => {

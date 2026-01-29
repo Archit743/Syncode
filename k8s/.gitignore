@@ -1,0 +1,4 @@
+# Never commit secrets
+runner-secrets.yaml
+*-secrets.yaml
+*.secret.yaml

@@ -35,10 +35,10 @@ export const Editor = ({
   }, [files]);
 
   useEffect(() => {
-    if (!selectedFile) {
+    if (!selectedFile && rootDir.files.length > 0 && rootDir.files[0]) {
       onSelect(rootDir.files[0])
     }
-  }, [selectedFile])
+  }, [selectedFile, rootDir])
 
   return (
     <EditorContainer>

@@ -90,29 +90,37 @@ app.post("/start", async (req, res) => {
             }
         }
         
-        // Respond immediately
-        res.status(200).send({ message: "Resources ready or created successfully" });
-
-        // Optional: check readiness in background and notify via websocket or log
-        (async function waitForReady() {
-            let ready = false;
-            while (!ready) {
-                try {
-                    const dep = await appsV1Api.readNamespacedDeployment(replId, namespace);
-                    const desired = dep.body.spec?.replicas ?? 1;
-                    const available = dep.body.status?.availableReplicas ?? 0;
-                    if (available >= desired) {
-                        ready = true;
-                        console.log(`Deployment ${replId} is ready`);
-                    } else {
-                        await new Promise(resolve => setTimeout(resolve, 5000));
-                    }
-                } catch (err) {
-                    console.error(err);
-                    await new Promise(resolve => setTimeout(resolve, 5000));
+        // Wait for pod to be ready before responding
+        console.log(`Waiting for deployment ${replId} to be ready...`);
+        let ready = false;
+        let attempts = 0;
+        const maxAttempts = 60; // 60 attempts * 1 second = 60 seconds max wait
+        
+        while (!ready && attempts < maxAttempts) {
+            try {
+                const dep = await appsV1Api.readNamespacedDeployment(replId, namespace);
+                const desired = dep.body.spec?.replicas ?? 1;
+                const available = dep.body.status?.availableReplicas ?? 0;
+                if (available >= desired) {
+                    ready = true;
+                    console.log(`Deployment ${replId} is ready`);
+                } else {
+                    attempts++;
+                    await new Promise(resolve => setTimeout(resolve, 1000));
                 }
+            } catch (err) {
+                console.error(`Error checking deployment status:`, err);
+                attempts++;
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
-        })();
+        }
+        
+        if (ready) {
+            res.status(200).send({ message: "Resources ready", ready: true });
+        } else {
+            // Pod didn't become ready in time, but resources were created
+            res.status(200).send({ message: "Resources created but pod may still be starting", ready: false });
+        }
     } catch (error) {
         console.error("Failed to handle resources", error);
         res.status(500).send({ message: "Failed to handle resources" });
