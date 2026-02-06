@@ -21,8 +21,8 @@ eksctl create cluster \
   --name syncode-cluster \
   --region ap-south-1 \
   --nodegroup-name syncode-nodes \
-  --node-type t3.medium \
-  --nodes 2 \
+  --node-type t3.small \
+  --nodes 4 \
   --nodes-min 1 \
   --nodes-max 4 \
   --managed
