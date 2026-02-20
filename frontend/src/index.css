@@ -1,10 +1,66 @@
-body {
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
+@import "tailwindcss";
 
-  background-color: #151515;
+/* Custom theme configuration for Syncode */
+@theme {
+  /* Custom colors */
+  --color-syncode-black: #000000;
+  --color-syncode-dark: #111111;
+  --color-syncode-darker: #151515;
+  --color-syncode-gray-900: #1a1a1a;
+  --color-syncode-gray-800: #222222;
+  --color-syncode-gray-700: #333333;
+  --color-syncode-gray-600: #555555;
+  --color-syncode-gray-500: #666666;
+  --color-syncode-gray-400: #888888;
+  --color-syncode-gray-300: #999999;
+  --color-syncode-gray-200: #e0e0e0;
+  --color-syncode-white: #ffffff;
+  
+  /* Custom fonts */
+  --font-mono: 'Courier New', monospace;
+  --font-sans: 'Inter', sans-serif;
+
+  /* Custom animations */
+  --animate-spin: spin 0.8s linear infinite;
+  --animate-pulse: pulse 1.5s ease-in-out infinite;
+  --animate-fade-in: fadeIn 0.8s ease-out;
+  --animate-glow-fade: glowFade 2.5s ease-out forwards;
+  --animate-grid-glow: gridGlow 0.5s ease-out forwards;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glowFade {
+  0% { color: #ffffff; text-shadow: 0 0 20px rgba(255, 255, 255, 1), 0 0 40px rgba(255, 255, 255, 0.7); }
+  30% { color: #ffffff; text-shadow: 0 0 20px rgba(255, 255, 255, 1), 0 0 40px rgba(255, 255, 255, 0.7); }
+  60% { color: #ffffff; text-shadow: 0 0 15px rgba(255, 255, 255, 0.8), 0 0 30px rgba(255, 255, 255, 0.5); }
+  80% { color: #cccccc; text-shadow: 0 0 8px rgba(255, 255, 255, 0.4); }
+  100% { color: #666666; text-shadow: none; }
+}
+
+@keyframes gridGlow {
+  0% { color: #ffffff; text-shadow: 0 0 20px rgba(255, 255, 255, 1), 0 0 40px rgba(255, 255, 255, 0.7); transform: scale(1.15); }
+  100% { color: #666666; text-shadow: none; transform: scale(1); }
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  background-color: var(--color-syncode-darker);
   color: white;
-  zoom: 1;
   margin: 0;
   padding: 0;
   overflow: hidden;

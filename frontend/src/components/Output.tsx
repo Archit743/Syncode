@@ -1,95 +1,14 @@
 import { useSearchParams } from "react-router-dom";
-import styled from "@emotion/styled";
 import { useState } from "react";
 
-const OutputContainer = styled.div`
-    height: 40vh;
-    min-height: 200px;
-    background-color: #000000;
-    border-bottom: 1px solid #333333;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    flex-shrink: 0;
-`;
-
-const OutputHeader = styled.div`
-    padding: 10px 16px;
-    background-color: #000000;
-    border-bottom: 1px solid #333333;
-    font-size: 10px;
-    font-weight: 400;
-    color: #999999;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    flex-shrink: 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-family: 'Courier New', monospace;
-`;
-
-const RefreshButton = styled.button`
-    padding: 4px 8px;
-    font-size: 9px;
-    background-color: #000000;
-    color: #ffffff;
-    border: 1px solid #666666;
-    border-radius: 0;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-
-    &:hover {
-        background-color: #1a1a1a;
-        border-color: #999999;
-    }
-
-    &:active {
-        transform: scale(0.98);
-    }
-`;
-
-const IframeWrapper = styled.div`
-    flex: 1;
-    background-color: white;
-    overflow: hidden;
-    position: relative;
-`;
-
-const StyledIframe = styled.iframe`
-    width: 100%;
-    height: 100%;
-    border: none;
-`;
-
-const ErrorMessage = styled.div`
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background-color: #000000;
-    color: #999999;
-    padding: 20px;
-    text-align: center;
-    gap: 12px;
-    font-size: 12px;
-    font-family: 'Courier New', monospace;
-    letter-spacing: 1px;
-`;
-
-const LoadingMessage = styled.div`
-    color: #cccccc;
-    font-size: 11px;
-    font-family: 'Courier New', monospace;
-`;
+const RefreshButton = ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
+    <button
+        onClick={onClick}
+        className="px-2 py-1 text-[9px] bg-black text-white border border-syncode-gray-600 rounded-none cursor-pointer transition-all duration-200 font-mono tracking-wider uppercase hover:bg-syncode-dark hover:border-syncode-gray-400 active:scale-[0.98]"
+    >
+        {children}
+    </button>
+);
 
 export const Output = () => {
     const [searchParams] = useSearchParams();
@@ -104,30 +23,31 @@ export const Output = () => {
     };
 
     return (
-        <OutputContainer>
-            <OutputHeader>
+        <div className="h-[40vh] min-h-[200px] bg-black border-b border-syncode-gray-700 flex flex-col overflow-hidden shrink-0">
+            <div className="px-4 py-2.5 bg-black border-b border-syncode-gray-700 text-[10px] font-normal text-syncode-gray-400 uppercase tracking-[2px] shrink-0 flex justify-between items-center font-mono">
                 <span>Preview - {INSTANCE_URI}</span>
                 <RefreshButton onClick={handleRefresh}>↻ Reload</RefreshButton>
-            </OutputHeader>
-            <IframeWrapper>
+            </div>
+            <div className="flex-1 bg-white overflow-hidden relative">
                 {showError && (
-                    <ErrorMessage>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black text-syncode-gray-400 p-5 text-center gap-3 text-xs font-mono tracking-wider">
                         <div>⚠️ Unable to load preview</div>
-                        <LoadingMessage>
+                        <div className="text-syncode-gray-300 text-[11px] font-mono">
                             Your application might still be starting up.
                             <br />
                             Make sure a web server is running on port 3000.
-                        </LoadingMessage>
+                        </div>
                         <RefreshButton onClick={handleRefresh}>Try Again</RefreshButton>
-                    </ErrorMessage>
+                    </div>
                 )}
-                <StyledIframe 
+                <iframe 
                     key={iframeKey}
                     src={`${INSTANCE_URI}`}
                     onError={() => setShowError(true)}
+                    className="w-full h-full border-none"
                     style={{ display: showError ? 'none' : 'block' }}
                 />
-            </IframeWrapper>
-        </OutputContainer>
+            </div>
+        </div>
     );
 } 

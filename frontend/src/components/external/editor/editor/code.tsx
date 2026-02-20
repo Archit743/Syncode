@@ -1,50 +1,7 @@
 import Editor from "@monaco-editor/react";
 import { File } from "../utils/file-manager";
 import { Socket } from "socket.io-client";
-import styled from "@emotion/styled";
 import { useEffect, useRef } from "react";
-
-const EditorWrapper = styled.div`
-  flex: 1;
-  background-color: #000000;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-`;
-
-const EditorHeader = styled.div`
-  padding: 8px 16px;
-  background-color: #000000;
-  border-bottom: 1px solid #333333;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-`;
-
-const FileTab = styled.div`
-  padding: 6px 12px;
-  background-color: #0a0a0a;
-  color: #ffffff;
-  font-size: 11px;
-  border-radius: 0;
-  border: 1px solid #333333;
-  font-family: 'Courier New', monospace;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  letter-spacing: 1px;
-`;
-
-const FileIcon = styled.span`
-  opacity: 0.8;
-  font-size: 11px;
-`;
-
-const EditorContainer = styled.div`
-  flex: 1;
-  overflow: hidden;
-`;
 
 export const Code = ({ selectedFile, socket }: { selectedFile: File | undefined, socket: Socket }) => {
   const editorRef = useRef<any>(null);
@@ -91,21 +48,12 @@ export const Code = ({ selectedFile, socket }: { selectedFile: File | undefined,
 
   if (!selectedFile)
     return (
-      <EditorWrapper>
-        <EditorHeader />
-        <EditorContainer style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center',
-          color: '#999999',
-          fontSize: '12px',
-          fontFamily: "'Courier New', monospace",
-          letterSpacing: '2px',
-          textTransform: 'uppercase'
-        }}>
+      <div className="flex-1 bg-black overflow-hidden flex flex-col">
+        <div className="px-4 py-2 bg-black border-b border-syncode-gray-700 flex items-center gap-2 min-h-[36px]" />
+        <div className="flex-1 overflow-hidden flex items-center justify-center text-syncode-gray-400 text-xs font-mono tracking-[2px] uppercase">
           Select a file to edit
-        </EditorContainer>
-      </EditorWrapper>
+        </div>
+      </div>
     );
 
   const code = selectedFile.content
@@ -129,14 +77,14 @@ export const Code = ({ selectedFile, socket }: { selectedFile: File | undefined,
     }
 
   return (
-    <EditorWrapper>
-      <EditorHeader>
-        <FileTab>
-          <FileIcon>📄</FileIcon>
+    <div className="flex-1 bg-black overflow-hidden flex flex-col">
+      <div className="px-4 py-2 bg-black border-b border-syncode-gray-700 flex items-center gap-2 min-h-[36px]">
+        <div className="px-3 py-1.5 bg-syncode-dark text-white text-[11px] rounded-none border border-syncode-gray-700 font-mono flex items-center gap-2 tracking-wider">
+          <span className="opacity-80 text-[11px]">📄</span>
           {selectedFile.name}
-        </FileTab>
-      </EditorHeader>
-      <EditorContainer>
+        </div>
+      </div>
+      <div className="flex-1 overflow-hidden">
         <Editor
           height="100%"
           language={language}
@@ -199,7 +147,7 @@ export const Code = ({ selectedFile, socket }: { selectedFile: File | undefined,
             }
           }, 500)}
         />
-      </EditorContainer>
-    </EditorWrapper>
+      </div>
+    </div>
   )
 }

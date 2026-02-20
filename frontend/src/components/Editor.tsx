@@ -1,23 +1,9 @@
 import { useEffect, useMemo} from "react";
 import Sidebar from "./external/editor/components/sidebar";
 import { Code } from "./external/editor/editor/code";
-import styled from "@emotion/styled";
 import { File, buildFileTree, RemoteFile } from "./external/editor/utils/file-manager";
 import { FileTree } from "./external/editor/components/file-tree";
 import { Socket } from "socket.io-client";
-
-const EditorContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background-color: #000000;
-`;
-
-const Main = styled.main`
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-`;
 
 export const Editor = ({
     files,
@@ -41,8 +27,8 @@ export const Editor = ({
   }, [selectedFile, rootDir])
 
   return (
-    <EditorContainer>
-      <Main>
+    <div className="flex flex-col h-full bg-black">
+      <main className="flex flex-1 overflow-hidden">
         <Sidebar>
           <FileTree
             rootDir={rootDir}
@@ -51,7 +37,7 @@ export const Editor = ({
           />
         </Sidebar>
         <Code socket={socket} selectedFile={selectedFile} />
-      </Main>
-    </EditorContainer>
+      </main>
+    </div>
   );
 };

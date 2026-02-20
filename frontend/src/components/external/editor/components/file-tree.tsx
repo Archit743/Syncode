@@ -1,7 +1,6 @@
 import React, {useState} from 'react'
 import {Directory, File, sortDir, sortFile} from "../utils/file-manager";
 import {getIcon} from "./icon";
-import styled from "@emotion/styled";
 
 interface FileTreeProps {
   rootDir: Directory;   // 根目录
@@ -59,41 +58,26 @@ const FileDiv = ({file, icon, selectedFile, onClick}: {
   const isSelected = (selectedFile && selectedFile.id === file.id) as boolean;
   const depth = file.depth;
   return (
-    <Div
-      depth={depth}
-      isSelected={isSelected}
-      onClick={onClick}>
+    <div
+      className={`
+        flex items-center py-1.5 pr-3 text-xs transition-all duration-150 font-mono tracking-[0.5px] cursor-pointer
+        ${isSelected 
+          ? 'bg-syncode-dark text-white border-l-2 border-syncode-gray-600' 
+          : 'bg-transparent text-syncode-gray-400 border-l-2 border-transparent hover:bg-syncode-black hover:text-white'
+        }
+      `}
+      style={{ paddingLeft: `${12 + depth * 16}px` }}
+      onClick={onClick}
+    >
       <FileIcon
         name={icon}
         extension={file.name.split('.').pop() || ""}/>
-      <span style={{marginLeft: 1}}>
+      <span className="ml-0.5">
         {file.name}
       </span>
-    </Div>
+    </div>
   )
 }
-
-const Div = styled.div<{
-  depth: number;
-  isSelected: boolean;
-}>`
-  display: flex;
-  align-items: center;
-  padding: 6px 12px 6px ${props => 12 + props.depth * 16}px;
-  background-color: ${props => props.isSelected ? "#1a1a1a" : "transparent"};
-  color: ${props => props.isSelected ? "#ffffff" : "#999999"};
-  font-size: 12px;
-  transition: all 0.15s ease;
-  border-left: 2px solid ${props => props.isSelected ? "#666666" : "transparent"};
-  font-family: 'Courier New', monospace;
-  letter-spacing: 0.5px;
-
-  :hover {
-    cursor: pointer;
-    background-color: ${props => props.isSelected ? "#1a1a1a" : "#0a0a0a"};
-    color: #ffffff;
-  }
-`
 
 const DirDiv = ({directory, selectedFile, onSelect}: {
   directory: Directory;  // 当前目录
@@ -152,19 +136,9 @@ const isChildSelected = (directory: Directory, selectedFile: File) => {
 const FileIcon = ({extension, name}: { name?: string, extension?: string }) => {
   let icon = getIcon(extension || "", name || "");
   return (
-    <Span>
+    <span className="flex w-6 h-6 justify-center items-center mr-2 shrink-0">
       {icon}
-    </Span>
+    </span>
   )
 }
-
-const Span = styled.span`
-  display: flex;
-  width: 24px;
-  height: 24px;
-  justify-content: center;
-  align-items: center;
-  margin-right: 8px;
-  flex-shrink: 0;
-`
 

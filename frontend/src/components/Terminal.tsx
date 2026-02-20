@@ -2,7 +2,6 @@ import { useEffect, useRef } from "react";
 import { Socket } from "socket.io-client";
 import { Terminal } from "xterm";
 import { FitAddon } from 'xterm-addon-fit';
-import styled from "@emotion/styled";
 
 const OPTIONS_TERM = {
     useStyle: true,
@@ -36,55 +35,6 @@ const OPTIONS_TERM = {
     fontSize: 13,
     lineHeight: 1.3,
 };
-
-const TerminalContainer = styled.div<{ isVisible: boolean }>`
-    flex: 1;
-    min-height: 0;
-    display: ${props => props.isVisible ? 'flex' : 'none'};
-    flex-direction: column;
-    background-color: #000000;
-    overflow: hidden;
-`;
-
-const TerminalHeader = styled.div`
-    padding: 10px 16px;
-    background-color: #000000;
-    border-bottom: 1px solid #333333;
-    font-size: 10px;
-    font-weight: 400;
-    color: #999999;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-    font-family: 'Courier New', monospace;
-`;
-
-const StatusIndicator = styled.div`
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: #ffffff;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
-`;
-
-const TerminalWrapper = styled.div`
-    flex: 1;
-    padding: 8px;
-    overflow: hidden;
-    background-color: #000000;
-    
-    .xterm {
-        height: 100%;
-        padding: 0;
-    }
-    
-    .xterm-viewport {
-        background-color: #000000 !important;
-    }
-`;
 
 export const TerminalComponent = ({ socket, isVisible = true }: { socket: Socket, isVisible?: boolean }) => {
     const terminalRef = useRef<HTMLDivElement>(null);
@@ -199,12 +149,15 @@ export const TerminalComponent = ({ socket, isVisible = true }: { socket: Socket
     }, [isVisible, socket]);
 
     return (
-        <TerminalContainer isVisible={isVisible}>
-            <TerminalHeader>
-                <StatusIndicator />
+        <div className={`flex-1 min-h-0 ${isVisible ? 'flex' : 'hidden'} flex-col bg-black overflow-hidden`}>
+            <div className="px-4 py-2.5 bg-black border-b border-syncode-gray-700 text-[10px] font-normal text-syncode-gray-400 uppercase tracking-[2px] flex items-center gap-2 shrink-0 font-mono">
+                <div className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
                 Terminal
-            </TerminalHeader>
-            <TerminalWrapper ref={terminalRef} />
-        </TerminalContainer>
+            </div>
+            <div 
+                ref={terminalRef} 
+                className="flex-1 p-2 overflow-hidden bg-black [&_.xterm]:h-full [&_.xterm]:p-0 [&_.xterm-viewport]:!bg-black"
+            />
+        </div>
     );
 };

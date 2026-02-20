@@ -3,8 +3,6 @@ import { Socket, io } from 'socket.io-client';
 import { Editor } from './Editor';
 import { File, RemoteFile, Type } from './external/editor/utils/file-manager';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import styled from '@emotion/styled';
-import { keyframes } from '@emotion/react';
 import { Output } from './Output';
 import { TerminalComponent as Terminal } from './Terminal';
 import axios from 'axios';
@@ -49,250 +47,58 @@ function useSocket(replId: string, enabled: boolean = true) {
     return socket;
 }
 
-const spin = keyframes`
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-`;
+// Loading screen component
+const LoadingScreen = ({ text }: { text: string }) => (
+    <div className="flex flex-col items-center justify-center h-screen w-screen bg-syncode-black gap-6 overflow-hidden">
+        <div className="w-10 h-10 border-2 border-syncode-gray-700 border-t-white rounded-full animate-spin" />
+        <div className="text-sm text-syncode-gray-300 font-normal animate-pulse font-mono tracking-widest uppercase">
+            {text}
+        </div>
+    </div>
+);
 
-const pulse = keyframes`
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-`;
+// Toggle button component
+const ToggleButton = ({ active, onClick, children }: { active?: boolean; onClick: () => void; children: React.ReactNode }) => (
+    <button
+        onClick={onClick}
+        className={`px-4 py-2 text-[11px] font-normal border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase active:scale-[0.98] ${
+            active 
+                ? 'bg-white text-black hover:bg-white' 
+                : 'bg-syncode-black text-white hover:bg-syncode-gray-900'
+        }`}
+    >
+        {children}
+    </button>
+);
 
-const Container = styled.div`
-  display: flex;
-  flex-direction: column;
-  width: 100vw;
-  height: 100vh;
-  background-color: #000000;
-  overflow: hidden;
-`;
-
-const Header = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 20px;
-  background-color: #000000;
-  border-bottom: 1px solid #ffffff;
-  height: 48px;
-  flex-shrink: 0;
-`;
-
-const Logo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 14px;
-  font-weight: 400;
-  color: white;
-  letter-spacing: 4px;
-  font-family: 'Courier New', monospace;
-  text-transform: uppercase;
-`;
-
-const ButtonContainer = styled.div`
-  display: flex;
-  gap: 12px;
-  align-items: center;
-`;
-
-const ToggleButton = styled.button<{ active?: boolean }>`
-  padding: 8px 16px;
-  font-size: 11px;
-  font-weight: 400;
-  background-color: ${props => props.active ? '#ffffff' : '#000000'};
-  color: ${props => props.active ? '#000000' : '#ffffff'};
-  border: 1px solid #ffffff;
-  border-radius: 0;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  letter-spacing: 2px;
-  font-family: 'Courier New', monospace;
-  text-transform: uppercase;
-
-  &:hover {
-    background-color: ${props => props.active ? '#ffffff' : '#1a1a1a'};
-    color: ${props => props.active ? '#000000' : '#ffffff'};
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
-`;
-
-const Workspace = styled.div`
-  display: flex;
-  margin: 0;
-  font-size: 16px;
-  width: 100%;
-  flex: 1;
-  overflow: hidden;
-`;
-
-const LeftPanel = styled.div`
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid #333333;
-  background-color: #000000;
-  overflow: hidden;
-`;
-
-const RightPanel = styled.div`
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  background-color: #000000;
-  overflow: hidden;
-`;
-
-const LoadingContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100vh;
-  width: 100vw;
-  background-color: #000000;
-  gap: 24px;
-  overflow: hidden;
-`;
-
-const Spinner = styled.div`
-  width: 40px;
-  height: 40px;
-  border: 2px solid #333333;
-  border-top-color: white;
-  border-radius: 50%;
-  animation: ${spin} 0.8s linear infinite;
-`;
-
-const LoadingText = styled.div`
-  font-size: 14px;
-  color: #999999;
-  font-weight: 400;
-  animation: ${pulse} 1.5s ease-in-out infinite;
-  font-family: 'Courier New', monospace;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-`;
-
-const ConnectionStatus = styled.div<{ connected: boolean }>`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10px;
-  color: ${props => props.connected ? '#ffffff' : '#999999'};
-  letter-spacing: 1px;
-  font-family: 'Courier New', monospace;
-  text-transform: uppercase;
-  
-  &::before {
-    content: '';
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background-color: ${props => props.connected ? '#ffffff' : '#666666'};
-    box-shadow: ${props => props.connected ? '0 0 8px rgba(255, 255, 255, 0.5)' : 'none'};
-  }
-`;
-
-const ConfirmDialog = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
-`;
-
-const DialogBox = styled.div`
-  background-color: #000000;
-  border: 2px solid #ffffff;
-  padding: 32px;
-  max-width: 480px;
-  width: 90%;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-`;
-
-const DialogTitle = styled.h2`
-  font-size: 16px;
-  font-weight: 400;
-  color: #ffffff;
-  margin: 0;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  font-family: 'Courier New', monospace;
-`;
-
-const DialogMessage = styled.p`
-  font-size: 12px;
-  color: #999999;
-  margin: 0;
-  line-height: 1.6;
-  letter-spacing: 1px;
-  font-family: 'Courier New', monospace;
-`;
-
-const DialogActions = styled.div`
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-`;
-
-const DialogButton = styled.button<{ variant?: 'primary' | 'secondary' }>`
-  padding: 10px 20px;
-  font-size: 11px;
-  font-weight: 400;
-  background-color: ${props => props.variant === 'primary' ? '#ffffff' : '#000000'};
-  color: ${props => props.variant === 'primary' ? '#000000' : '#ffffff'};
-  border: 1px solid #ffffff;
-  border-radius: 0;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  letter-spacing: 2px;
-  font-family: 'Courier New', monospace;
-  text-transform: uppercase;
-
-  &:hover {
-    background-color: ${props => props.variant === 'primary' ? '#ffffff' : '#1a1a1a'};
-    transform: scale(1.02);
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
-`;
-
+// Connection status indicator
+const ConnectionStatus = ({ connected }: { connected: boolean }) => (
+    <div className={`flex items-center gap-2 text-[10px] tracking-wide font-mono uppercase ${connected ? 'text-white' : 'text-syncode-gray-300'}`}>
+        <span 
+            className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-syncode-gray-500'}`} 
+        />
+        {connected ? 'Connected' : 'Connecting...'}
+    </div>
+);
 
 export const CodingPage = () => {
     const [podCreated, setPodCreated] = useState(false);
     const [searchParams] = useSearchParams();
     const replId = searchParams.get('replId') ?? '';
     
+    const SERVICE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+
     useEffect(() => {
         if (replId) {
-            axios.post(`http://localhost:3002/start`, { replId })
+            axios.post(`${SERVICE_URL}/start`, { replId })
                 .then(() => setPodCreated(true))
                 .catch((err) => console.error(err));
         }
 
-        // Cleanup on browser close/tab close (beforeunload event)
         const handleBeforeUnload = () => {
             if (replId) {
-                // Use sendBeacon for reliable cleanup on page unload
                 const blob = new Blob([JSON.stringify({ replId })], { type: 'application/json' });
-                navigator.sendBeacon('http://localhost:3002/stop', blob);
+                navigator.sendBeacon(`${SERVICE_URL}/stop`, blob);
             }
         };
 
@@ -304,15 +110,9 @@ export const CodingPage = () => {
     }, [replId]);
 
     if (!podCreated) {
-        return (
-            <LoadingContainer>
-                <Spinner />
-                <LoadingText>Booting your environment...</LoadingText>
-            </LoadingContainer>
-        );
+        return <LoadingScreen text="Booting your environment..." />;
     }
     return <CodingPagePostPodCreation />
-
 }
 
 export const CodingPagePostPodCreation = () => {
@@ -345,10 +145,12 @@ export const CodingPagePostPodCreation = () => {
         }
     }, [socket]);
 
+    const SERVICE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+
     const handleStopEnvironment = async () => {
         setShowStopDialog(false);
         try {
-            await axios.post(`http://localhost:3002/stop`, { replId });
+            await axios.post(`${SERVICE_URL}/stop`, { replId });
             navigate('/');
         } catch (error) {
             console.error('Failed to stop environment:', error);
@@ -385,78 +187,81 @@ export const CodingPagePostPodCreation = () => {
     };
     
     if (!loaded) {
-        return (
-            <LoadingContainer>
-                <Spinner />
-                <LoadingText>Loading workspace...</LoadingText>
-            </LoadingContainer>
-        );
+        return <LoadingScreen text="Loading workspace..." />;
     }
 
     return (
-        <Container>
-            <Header>
-                <Logo>
+        <div className="flex flex-col w-screen h-screen bg-syncode-black overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 bg-syncode-black border-b border-white h-12 shrink-0">
+                <div className="flex items-center gap-4 text-sm font-normal text-white tracking-[4px] font-mono uppercase">
                     Syncode
-                    <ConnectionStatus connected={isConnected}>
-                        {isConnected ? 'Connected' : 'Connecting...'}
-                    </ConnectionStatus>
-                </Logo>
-                <ButtonContainer>
-                    <ToggleButton 
-                        onClick={refreshFiles}
-                    >
+                    <ConnectionStatus connected={isConnected} />
+                </div>
+                <div className="flex gap-3 items-center">
+                    <ToggleButton onClick={refreshFiles}>
                         🔄 Refresh Files
                     </ToggleButton>
-                    <ToggleButton 
-                        active={showOutput}
-                        onClick={() => setShowOutput(!showOutput)}
-                    >
+                    <ToggleButton active={showOutput} onClick={() => setShowOutput(!showOutput)}>
                         {showOutput ? '✓ Output' : 'Show Output'}
                     </ToggleButton>
-                    <ToggleButton 
-                        active={showTerminal}
-                        onClick={() => setShowTerminal(!showTerminal)}
-                    >
+                    <ToggleButton active={showTerminal} onClick={() => setShowTerminal(!showTerminal)}>
                         {showTerminal ? '✓ Terminal' : 'Show Terminal'}
                     </ToggleButton>
-                    <ToggleButton 
-                        onClick={() => setShowStopDialog(true)}
-                    >
+                    <ToggleButton onClick={() => setShowStopDialog(true)}>
                         ⏹ Stop
                     </ToggleButton>
-                </ButtonContainer>
-            </Header>
-            <Workspace>
-                <LeftPanel>
+                </div>
+            </div>
+
+            {/* Workspace */}
+            <div className="flex m-0 text-base w-full flex-1 overflow-hidden">
+                <div className="flex-1 min-w-0 flex flex-col border-r border-syncode-gray-700 bg-syncode-black overflow-hidden">
                     <Editor socket={socket!} selectedFile={selectedFile} onSelect={onSelect} files={fileStructure} />
-                </LeftPanel>
-                <RightPanel style={{ display: (showOutput || showTerminal) ? 'flex' : 'none' }}>
+                </div>
+                <div 
+                    className="flex-1 min-w-0 flex flex-col bg-syncode-black overflow-hidden"
+                    style={{ display: (showOutput || showTerminal) ? 'flex' : 'none' }}
+                >
                     {showOutput && <Output />}
                     <Terminal socket={socket!} isVisible={showTerminal} />
-                    {/* changed socket to socket! */}
-                </RightPanel>
-            </Workspace>
+                </div>
+            </div>
             
+            {/* Stop Dialog */}
             {showStopDialog && (
-                <ConfirmDialog onClick={() => setShowStopDialog(false)}>
-                    <DialogBox onClick={(e) => e.stopPropagation()}>
-                        <DialogTitle>Stop Environment?</DialogTitle>
-                        <DialogMessage>
+                <div 
+                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-[1000] backdrop-blur-sm"
+                    onClick={() => setShowStopDialog(false)}
+                >
+                    <div 
+                        className="bg-syncode-black border-2 border-white p-8 max-w-[480px] w-[90%] flex flex-col gap-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="text-base font-normal text-white m-0 tracking-[3px] uppercase font-mono">
+                            Stop Environment?
+                        </h2>
+                        <p className="text-xs text-syncode-gray-300 m-0 leading-relaxed tracking-wide font-mono">
                             Are you sure you want to stop and cleanup this environment? 
                             All unsaved changes will be lost and the environment will be terminated.
-                        </DialogMessage>
-                        <DialogActions>
-                            <DialogButton onClick={() => setShowStopDialog(false)}>
+                        </p>
+                        <div className="flex gap-3 justify-end">
+                            <button 
+                                className="px-5 py-2.5 text-[11px] font-normal bg-syncode-black text-white border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase hover:bg-syncode-gray-900 hover:scale-[1.02] active:scale-[0.98]"
+                                onClick={() => setShowStopDialog(false)}
+                            >
                                 Cancel
-                            </DialogButton>
-                            <DialogButton variant="primary" onClick={handleStopEnvironment}>
+                            </button>
+                            <button 
+                                className="px-5 py-2.5 text-[11px] font-normal bg-white text-black border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase hover:scale-[1.02] active:scale-[0.98]"
+                                onClick={handleStopEnvironment}
+                            >
                                 Stop Environment
-                            </DialogButton>
-                        </DialogActions>
-                    </DialogBox>
-                </ConfirmDialog>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
-        </Container>
+        </div>
     );
 }
