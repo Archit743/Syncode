@@ -91,7 +91,11 @@ export const Dashboard = () => {
 
   const updateProjectInState = (updated: Project) => {
     setProjects((prev) => {
-      const next = prev.map((project) => (project.id === updated.id ? updated : project));
+      const next = prev.map((project) =>
+        project.id === updated.id
+          ? { ...updated, accessRole: updated.accessRole ?? project.accessRole }
+          : project
+      );
       sessionStorage.setItem(PROJECT_CACHE_KEY, JSON.stringify({ timestamp: Date.now(), projects: next } satisfies ProjectsCache));
       return next;
     });
