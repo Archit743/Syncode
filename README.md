@@ -1,230 +1,183 @@
 # Syncode
 
-A cloud-based code execution platform that provides isolated development environments with real-time terminal access and file management capabilities.
-
-## Overview
-
-Syncode is a microservices-based platform that allows users to create, manage, and execute code in isolated Kubernetes pods. It provides a web-based IDE with Monaco editor, real-time terminal access via WebSocket, and file system operations.
+A cloud-based code execution platform that provides isolated development environments with real-time terminal access, collaborative editing, and file management — powered by Kubernetes, Auth0, and MongoDB.
 
 ## Architecture
 
-The platform consists of four main services:
+```
+┌──────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│   Frontend   │────▶│   Orchestrator  │────▶│  Kubernetes Pod  │
+│  React/Vite  │     │  Express + Auth0 │     │   (Runner)       │
+│  Auth0 SPA   │     │  Prisma/MongoDB  │     │  PTY + WebSocket │
+└──────┬───────┘     └───────┬──────────┘     └──────────────────┘
+       │                     │
+       │              ┌──────┴──────┐
+       │              │ Init Service│
+       │              │   S3 Copy   │
+       │              └─────────────┘
+       │
+  ┌────┴────┐    ┌──────────┐    ┌──────────┐
+  │  Auth0  │    │ MongoDB  │    │  AWS S3  │
+  │  IdP    │    │ (Atlas)  │    │ Templates│
+  └─────────┘    └──────────┘    └──────────┘
+```
 
-### 1. Frontend (`frontend/`)
-- **Technology**: React + TypeScript + Vite
-- **Port**: 5173 (development)
-- **Purpose**: Web-based IDE interface with Monaco editor, terminal emulator (xterm), and file explorer
-- **Key Features**:
-  - Code editing with syntax highlighting
-  - Real-time terminal via WebSocket
-  - File tree navigation and operations
-  - Project creation and environment management
+### Services
 
-### 2. Init Service (`init-service/`)
-- **Technology**: Node.js + Express + TypeScript
-- **Port**: 3001
-- **Purpose**: Initialize new projects by copying templates from S3
-- **Key Features**:
-  - Template retrieval from AWS S3
-  - Project structure creation
-  - Language-specific boilerplate setup
+| Service | Directory | Port | Purpose |
+|---------|-----------|------|---------|
+| **Frontend** | `frontend/` | 5173 | React SPA with Monaco editor, xterm.js terminal, Auth0 login |
+| **Orchestrator** | `orchestrator/` | 3002 | API server — Auth0 JWT auth, Prisma/MongoDB, K8s lifecycle |
+| **Init Service** | `init-service/` | 3001 | Copies language templates from S3 on project creation |
+| **Runner** | `runner/` | 3001 (WS) / 3000 (app) | Runs inside K8s pods — PTY shell, WebSocket, file ops |
 
-### 3. Orchestrator (`orchestrator/`)
-- **Technology**: Node.js + Express + Kubernetes Client + TypeScript
-- **Port**: 3002
-- **Purpose**: Manage Kubernetes resources (Deployments, Services, Ingress)
-- **Key Features**:
-  - Dynamic pod creation and deletion
-  - Service and Ingress management
-  - Resource lifecycle orchestration
-  - Health monitoring
+### External Dependencies
 
-### 4. Runner (`runner/`)
-- **Technology**: Node.js + Express + Socket.io + node-pty + TypeScript
-- **Ports**: 3000 (user app), 3001 (WebSocket)
-- **Deployment**: Docker container in Kubernetes pods (pulled from Docker Hub)
-- **Purpose**: Provide isolated execution environment within Kubernetes pods
-- **Key Features**:
-  - PTY (pseudo-terminal) for shell access
-  - WebSocket server for real-time communication
-  - File system operations (read, write, list)
-  - User application hosting
+| Service | Purpose |
+|---------|---------|
+| **Auth0** | Identity provider — user login, JWT tokens |
+| **MongoDB** (Atlas) | Stores users, projects, collaborators via Prisma ORM |
+| **AWS S3** | Stores base language templates + user project code |
+| **AWS EKS** | Kubernetes cluster hosting runner pods |
+| **Docker Hub** | Container registry for runner image |
 
-> **Note**: The runner service runs ONLY as a Docker container inside Kubernetes pods. It is not started manually. You must build the Docker image and push it to Docker Hub, then reference it in the orchestrator's `service.yaml`.
-
-## Technology Stack
+## Tech Stack
 
 ### Frontend
-- React 18
-- TypeScript
-- Vite (build tool)
-- Monaco Editor (code editor)
-- xterm.js (terminal emulator)
-- Emotion (CSS-in-JS)
-- Socket.io Client (real-time communication)
-- React Router (navigation)
+React 18 · TypeScript · Vite · Monaco Editor · xterm.js · Socket.io Client · Auth0 SPA SDK · React Router · Axios
 
-### Backend Services
-- Node.js
-- Express
-- TypeScript
-- Socket.io (WebSocket)
-- node-pty (terminal emulation)
-- AWS SDK (S3 operations)
-- Kubernetes Client (@kubernetes/client-node)
+### Backend (Orchestrator + Init Service)
+Node.js · Express · TypeScript · Prisma (MongoDB) · Auth0 JWT (`express-oauth2-jwt-bearer`) · @kubernetes/client-node · AWS SDK · YAML parser
+
+### Runner (Docker Container)
+Node.js · Express · Socket.io · node-pty · TypeScript
 
 ### Infrastructure
-- Kubernetes (container orchestration)
-- Docker (containerization)
-- AWS S3 (template storage)
-- Nginx Ingress Controller
+Kubernetes (EKS) · Docker · AWS S3 · NGINX Ingress Controller · MongoDB Atlas · Auth0
 
 ## Project Structure
 
 ```
 Syncode/
-├── frontend/              # React web application
+├── frontend/                 # React SPA
 │   ├── src/
-│   │   ├── components/    # UI components
-│   │   └── assets/        # Static assets
-│   └── package.json
-├── init-service/          # Project initialization service
+│   │   ├── auth/             # Auth0 provider, protected routes
+│   │   ├── components/       # CodingPage, Editor, Terminal, Landing, Navbar, etc.
+│   │   ├── pages/            # Dashboard, Profile, Search
+│   │   └── App.tsx           # Router with protected routes
+│   └── .env.example
+├── orchestrator/             # API + K8s orchestration
 │   ├── src/
-│   │   ├── index.ts       # Express server
-│   │   └── aws.ts         # S3 operations
-│   └── package.json
-├── orchestrator/          # Kubernetes orchestration service
+│   │   ├── index.ts          # Express server, all API routes
+│   │   └── aws.ts            # AWS config
+│   ├── prisma/
+│   │   └── schema.prisma     # User, Project, ProjectCollaborator models
+│   ├── service.yaml.example  # K8s manifest template
+│   └── .env.example
+├── init-service/             # S3 template copier
 │   ├── src/
-│   │   ├── index.ts       # Express server + k8s logic
-│   │   └── aws.ts         # AWS configuration
-│   ├── service.yaml       # Kubernetes manifests template
-│   └── package.json
-├── runner/                # Execution environment service
+│   │   ├── index.ts          # Express server
+│   │   └── aws.ts            # S3 copy operations
+│   └── .env
+├── runner/                   # Containerized execution env
 │   ├── src/
-│   │   ├── index.ts       # Main server
-│   │   ├── ws.ts          # WebSocket handlers
-│   │   ├── pty.ts         # Terminal emulation
-│   │   └── fs.ts          # File system operations
-│   ├── Dockerfile         # Container image
-│   └── package.json
-├── k8s/                   # Kubernetes configuration
-│   └── ingress-controller.yaml
-├── QUICKSTART.md          # Quick setup guide
-├── DEPLOYMENT_DIAGRAM.md  # Architecture documentation
-└── ACTIVITY_DIAGRAM.md    # Workflow documentation
+│   │   ├── index.ts          # Express + HTTP server
+│   │   ├── ws.ts             # WebSocket event handlers
+│   │   ├── pty.ts            # PTY terminal management
+│   │   └── fs.ts             # File system operations
+│   └── Dockerfile
+├── k8s/                      # Cluster config
+│   ├── ingress-controller.yaml
+│   └── runner-secrets.yaml
+├── S3BaseCodes/              # Base templates (node, python)
+├── QUICKSTART.md             # Local dev setup
+├── INFRASTRUCTURE_SETUP.md   # AWS + K8s cluster setup
+├── ACTIVITY_DIAGRAM.md       # Workflow documentation
+└── DEPLOYMENT_DIAGRAM.md     # Architecture diagram
 ```
-
-## Prerequisites
-
-- Node.js 18+ and npm/yarn (for frontend and backend services)
-- Docker (for building and pushing runner image)
-- Docker Hub account (for hosting runner image)
-- Kubernetes cluster (for production deployment)
-- AWS account with S3 access (for template storage)
-- kubectl (for Kubernetes operations)
-
-## Quick Start
-
-See [QUICKSTART.md](./QUICKSTART.md) for detailed local development setup instructions.
 
 ## Workflow
 
-1. **User creates a project** → Frontend sends request to Init Service
-2. **Init Service** → Copies template from S3 to designated location
-3. **Frontend requests environment** → Calls Orchestrator to create pod
-4. **Orchestrator** → Creates Kubernetes Deployment, Service, and Ingress
-5. **Runner Pod starts** → Copies project files from S3 to workspace
-6. **Frontend connects** → Establishes WebSocket connection to Runner
-7. **User interacts** → Code editing, terminal commands, file operations
-8. **User stops environment** → Orchestrator deletes Kubernetes resources
+1. **User visits landing page** → clicks Login → Auth0 handles authentication
+2. **Auth0 callback** → frontend syncs user profile via `POST /verify-user`
+3. **Dashboard** → user sees their projects and shared projects
+4. **Create project** → `POST /projects` → Init Service copies S3 template → Orchestrator creates K8s pod
+5. **Pod starts** → initContainer copies code from S3 → runner container boots WebSocket server
+6. **Frontend connects** → WebSocket to `{replId}.iluvcats.me` for terminal + file ops
+7. **User codes** → edits files, runs terminal commands, previews app at `{replId}.catclub.tech`
+8. **Stop environment** → `POST /stop` → Orchestrator deletes K8s Deployment/Service/Ingress
+
+### Domains
+
+| Domain | Purpose |
+|--------|---------|
+| `*.iluvcats.me` | WebSocket connections to runner pods (port 3001) |
+| `*.catclub.tech` | User application preview (port 3000) |
+
+Both require wildcard DNS records pointing to the EKS ingress load balancer.
 
 ## Environment Variables
 
-### Init Service
-- `AWS_ACCESS_KEY_ID` - AWS credentials
-- `AWS_SECRET_ACCESS_KEY` - AWS credentials
-- `PORT` - Server port (default: 3001)
+See `.env.example` files in each service for the latest reference.
 
-### Orchestrator
-- `AWS_ACCESS_KEY_ID` - AWS credentials
-- `AWS_SECRET_ACCESS_KEY` - AWS credentials
-- `PORT` - Server port (default: 3002)
-- `KUBECONFIG` - Path to kubeconfig file (for local development)
+### Frontend (`frontend/.env.example`)
+| Variable | Description |
+|----------|-------------|
+| `VITE_AUTH0_DOMAIN` | Auth0 tenant domain |
+| `VITE_AUTH0_CLIENT_ID` | Auth0 SPA client ID |
+| `VITE_AUTH0_AUDIENCE` | Auth0 API audience identifier |
+| `VITE_API_URL` | Orchestrator URL (default: `http://localhost:3002`) |
 
-### Runner
-- `AWS_ACCESS_KEY_ID` - AWS credentials (for S3 access in initContainer)
-- `AWS_SECRET_ACCESS_KEY` - AWS credentials
+### Orchestrator (`orchestrator/.env.example`)
+| Variable | Description |
+|----------|-------------|
+| `PORT` | Server port (default: 3002) |
+| `DATABASE_URL` | MongoDB connection string (Atlas or local) |
+| `AUTH0_AUDIENCE` | Auth0 API audience identifier |
+| `AUTH0_ISSUER_BASE_URL` | Auth0 issuer URL |
 
-### Frontend
-- `VITE_INIT_SERVICE_URL` - Init service endpoint
-- `VITE_ORCHESTRATOR_URL` - Orchestrator service endpoint
+### Init Service (`init-service/.env`)
+| Variable | Description |
+|----------|-------------|
+| `AWS_ACCESS_KEY_ID` | AWS credentials for S3 |
+| `AWS_SECRET_ACCESS_KEY` | AWS credentials for S3 |
+| `AWS_REGION` | AWS region (e.g., `ap-south-1`) |
+| `S3_BUCKET` | S3 bucket name |
+| `PORT` | Server port (default: 3001) |
 
-## Deployment
+## API Overview
 
-### Local Development
-1. Install dependencies for frontend, init-service, and orchestrator
-2. Build and push runner Docker image to Docker Hub
-3. Update `orchestrator/service.yaml` with your Docker Hub image
-4. Start frontend, init-service, and orchestrator services
-5. For full testing, set up a local Kubernetes cluster
+The orchestrator exposes all API endpoints, protected by Auth0 JWT:
 
-Follow the detailed steps in [QUICKSTART.md](./QUICKSTART.md).
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/verify-user` | Sync Auth0 profile to MongoDB |
+| `GET` | `/projects` | List user's owned + shared projects |
+| `POST` | `/projects` | Create project + start K8s pod |
+| `DELETE` | `/projects/:replId` | Delete project and K8s resources |
+| `POST` | `/projects/:replId/fork` | Fork a project |
+| `GET` | `/projects/:replId/access` | Check project access |
+| `PATCH` | `/projects/:replId/visibility` | Toggle public/private |
+| `POST` | `/projects/:replId/collaborators` | Add collaborator by email |
+| `DELETE` | `/projects/:replId/collaborators/:userId` | Remove collaborator |
+| `POST` | `/start` | Start K8s pod for a project |
+| `POST` | `/stop` | Stop and delete K8s resources |
+| `GET` | `/users/search` | Search users by name/email |
+| `GET` | `/users/:id` | Get user profile |
+| `GET` | `/users/:id/projects` | Get user's public projects |
+| `GET` | `/me/profile` | Get own profile |
+| `PATCH` | `/me/profile` | Update name, username, bio, website |
 
-### Production (Kubernetes)
-1. Build runner Docker image: `docker build -t your-dockerhub-username/runner:latest ./runner`
-2. Push to Docker Hub: `docker push your-dockerhub-username/runner:latest`
-3. Configure AWS credentials as Kubernetes Secrets
-4. Update `orchestrator/service.yaml` with:
-   - Your Docker Hub image reference
-   - Your S3 bucket name
-   - Your domain for Ingress
-5. Deploy init-service and orchestrator to your Kubernetes cluster
-6. Host frontend on static hosting (Vercel, Netlify, S3+CloudFront)
-7. Configure Ingress with your domain and TLS certificates
+See [orchestrator/README.md](./orchestrator/README.md) for full request/response details.
 
-See [DEPLOYMENT_DIAGRAM.md](./DEPLOYMENT_DIAGRAM.md) for detailed deployment architecture.
+## Quick Start
 
-## API Endpoints
+See [QUICKSTART.md](./QUICKSTART.md) for local development setup.
 
-### Init Service (Port 3001)
-- `POST /project` - Create new project from template
-  - Body: `{ replId: string, language: string }`
+## Infrastructure
 
-### Orchestrator (Port 3002)
-- `POST /start` - Create Kubernetes resources for new environment
-  - Body: `{ replId: string, language: string }`
-- `POST /stop` - Delete Kubernetes resources
-  - Body: `{ replId: string }`
-
-### Runner (Ports 3000, 3001)
-- `GET /files` - HTTP endpoint for file operations
-- WebSocket events:
-  - `fetchDir` - List directory contents
-  - `fetchContent` - Read file content
-  - `updateContent` - Write file content
-  - `terminal:write` - Send terminal input
-  - `terminal:data` - Receive terminal output
-
-## Security Considerations
-
-- **Secrets Management**: Use Kubernetes Secrets or external secret managers (AWS Secrets Manager, HashiCorp Vault) for sensitive credentials
-- **Network Policies**: Implement Kubernetes Network Policies to restrict pod-to-pod communication
-- **Resource Limits**: Configure CPU/memory limits in Kubernetes manifests to prevent resource exhaustion
-- **Ingress Security**: Enable TLS/SSL and authentication at the Ingress level
-- **IAM Roles**: Use IRSA (IAM Roles for Service Accounts) instead of hardcoded AWS credentials
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test locally using the quickstart guide
-5. Submit a pull request
+See [INFRASTRUCTURE_SETUP.md](./INFRASTRUCTURE_SETUP.md) for AWS + Kubernetes cluster setup.
 
 ## License
 
 MIT
-
-## Support
-
-For issues, questions, or contributions, please open an issue in the repository.

@@ -1,158 +1,107 @@
-# Deployment Diagram — How to design for this project
+# Syncode — Deployment Diagram
 
-This document explains how to create a clear deployment diagram for the Syncode project in this workspace. It covers what elements to include, how to map diagram elements to repository artifacts, notation and layout tips, a Mermaid example diagram you can iterate from, and a verification checklist.
+Runtime topology and network relationships of the Syncode platform.
 
-## Purpose
-
-Make a deployment diagram that communicates the runtime topology and network relationships of the system:
-- Which processes run where (developer browser, Kubernetes cluster, cloud services).
-- Which containers and services communicate with which external systems (S3, container registry).
-- Ports, protocols, and important runtime assumptions (service accounts, IAM, volumes).
-
-The diagram should be usable for onboarding, operations runbooks, and architecture reviews.
-
-## Key stakeholders and audience
-- Developers working on the Syncode services (frontend, init-service, orchestrator, runner).
-- DevOps/Kubernetes operators deploying the runner/orchestrator stacks.
-- Security reviewers who need to understand network boundaries and IAM roles.
-
-Design the diagram for a technical audience; annotate with filenames and manifest references where helpful.
-
-## Core elements to include
-1. Developer (client)
-   - Browser/IDE that interacts with the frontend (Vite dev server) and WebSocket/HTTP endpoints.
-2. Ingress / Load Balancer
-   - Ingress controller (see `k8s/ingress-controller.yaml`) or cloud LB
-   - TLS termination point
-3. Kubernetes cluster (one box in diagram that expands to logical pieces)
-   - Namespace(s) used for the app
-   - Deployments/Pods: `orchestrator`, `init-service`, `runner` (runner's PTY server + web socket), frontend (if deployed)
-   - Services for internal routing (ClusterIP, NodePort)
-4. Storage and external systems
-   - AWS S3 (template storage) — used by `init-service`
-   - Container registry (if container images are built)
-   - Optional: PersistentVolumes / Claims (for runner workspace)
-5. CI / CD and build systems (if relevant)
-   - Where container images are built and pushed
-6. External users/clients and monitoring
-   - Developer workstation, logging/metrics backends (optional)
-
-Label each node with its name, key ports, and one-line responsibility.
-
-## Map diagram elements to repository files
-- Frontend (dev server & static assets): `frontend/` (Vite + React).
-- Init service (project bootstrap from S3): `init-service/src/`.
-- Orchestrator (creates k8s resources): `orchestrator/src/` and `orchestrator/service.yaml`.
-- Runner (PTY, web socket, file ops): `runner/src/` and `runner/Dockerfile`.
-- Kubernetes manifests: `k8s/` and individual manifest files referenced under each service.
-
-Include these file paths near the corresponding elements in the diagram (small italic text or note icons).
-
-## Ports & protocols (important labels)
-- HTTP/HTTPS: 80/443 — ingress to frontend/orchestrator/runners
-- WebSocket: e.g., ws:// or wss:// endpoint served by the runner (port depends on deployment)
-- Runner PTY within Pod: internal TCP used by PTY library (exposed over socket.io)
-- Orchestrator API: REST endpoints used by the frontend (`/start`, `/stop`) — show port (e.g. 3002) if relevant to your environment
-- Init-Service API: HTTP port (e.g. 3001) for creating projects
-
-Always annotate ports on the arrows between nodes.
-
-## Security & identity annotations
-- Show which components need AWS credentials (e.g., `init-service` needs S3 access). Indicate whether credentials are provided via:
-  - Kubernetes Secrets
-  - ServiceAccount + IAM Roles (IRSA or equivalent)
-- Show which components are public vs private (publicly reachable via ingress or only internal ClusterIP).
-- Indicate whether traffic is encrypted (TLS) between ingress and services.
-
-## Kubernetes mapping guidance
-For each Kubernetes object, show a short mapping like:
-- Deployment: `orchestrator` → `orchestrator/` (Deployment spec & Service)
-- Deployment: `runner` → `runner/Dockerfile` and `runner` source files
-- Ingress: see `k8s/ingress-controller.yaml`
-- Volumes: any `PersistentVolumeClaim` used by runner for workspace data
-
-Include arrows for: Ingress → Service → Pod (Deployment).
-
-## Layout and visual design tips
-- Use layers: top = external actors (Developer, CI/CD, Registry), middle = cluster boundary (box with rounded corners), bottom = cloud managed services (S3, Auth).
-- Use colors consistently: one color for public-facing paths, another for internal communication.
-- Avoid overcrowding: use swimlanes or grouped nodes for related services (e.g., group all syncode microservices).
-- Provide a legend for symbols and colors.
-
-## Notation and symbols (UML-style deployment)
-- Node: execution environment (Kubernetes cluster, Node, Container host)
-- Component / Artifact: containers, services, or files (e.g., `runner:container`)
-- Association: network arrow labeled with protocol and port
-- Note: add file path references and manifest names as side-notes
-
-## Example (Mermaid flow) — use as a starting point
+## Mermaid Diagram
 
 ```mermaid
-flowchart LR
-  %% External actors
-  Dev["Developer Browser\n(Vite / React)"]
-  CI["CI / Build"]
-  Registry["Container Registry"]
-  S3["AWS S3\n(templates)"]
-
-  %% Ingress / Load Balancer
-  Ingress["Ingress / LB\n(TLS)" ]
-
-  subgraph K8sCluster [Kubernetes Cluster]
-    direction TB
-    IngressSvc["Ingress Controller"]
-    Orchestrator["orchestrator\n(Deployment)\nPort: 3002"]
-    InitService["init-service\n(Deployment)\nPort: 3001"]
-    Runner["runner Pods\n(Deployment)\nWS / PTY"]
-    Frontend["frontend (optional)\n(Vite/Static)"]
+flowchart TB
+  subgraph External["External Services"]
+    Auth0["Auth0\n(Identity Provider)"]
+    MongoDB["MongoDB Atlas\n(User/Project DB)"]
+    S3["AWS S3\n(Code Storage)"]
+    DockerHub["Docker Hub\n(Runner Image)"]
   end
 
-  %% Connections
-  Dev -->|HTTPS| Ingress
-  Ingress --> IngressSvc
-  IngressSvc --> Orchestrator
-  IngressSvc --> Frontend
-  Dev -->|WS/WSS| Runner
+  subgraph Client["Developer Browser"]
+    Frontend["Frontend\n(React + Vite)\nPort: 5173"]
+  end
 
-  Orchestrator -->|k8s API / happens in-cluster| Runner
-  InitService -->|S3 access| S3
-  CI -->|push images| Registry
-  Registry -->|images| Runner
+  subgraph K8s["Kubernetes Cluster (EKS)"]
+    Ingress["NGINX Ingress Controller\n(TLS Termination)"]
+    
+    subgraph Services["Syncode Services"]
+      Orchestrator["Orchestrator\n(Express + Prisma)\nPort: 3002"]
+      InitService["Init Service\n(Express)\nPort: 3001"]
+    end
 
-  classDef ext fill:#f9f,stroke:#333,stroke-width:1px;
-  class Dev,CI,Registry,S3 ext;
+    subgraph Pods["Dynamic Runner Pods"]
+      InitContainer["initContainer\n(aws-cli → S3 copy)"]
+      Runner["Runner Container\n(node-pty + Socket.io)\nWS: 3001 / App: 3000"]
+    end
+  end
+
+  Frontend -->|"HTTPS / Auth0 JWT"| Orchestrator
+  Frontend -->|"WSS via *.iluvcats.me"| Ingress
+  Frontend -->|"HTTPS via *.catclub.tech"| Ingress
+  Ingress -->|"Port 3001"| Runner
+  Ingress -->|"Port 3000"| Runner
+
+  Orchestrator -->|"Prisma ORM"| MongoDB
+  Orchestrator -->|"JWT Validation"| Auth0
+  Orchestrator -->|"K8s API"| Pods
+  Orchestrator -->|"HTTP"| InitService
+
+  InitService -->|"S3 Copy"| S3
+  InitContainer -->|"S3 Copy"| S3
+  DockerHub -->|"Image Pull"| Runner
+
+  Frontend -->|"Auth0 SPA SDK"| Auth0
+
+  classDef external fill:#2d2d2d,stroke:#666,color:#fff;
+  classDef client fill:#1a1a2e,stroke:#4a9eff,color:#fff;
+  classDef k8s fill:#0d1117,stroke:#3fb950,color:#fff;
+  classDef service fill:#161b22,stroke:#58a6ff,color:#fff;
+
+  class Auth0,MongoDB,S3,DockerHub external;
+  class Frontend client;
 ```
 
-Notes:
-- The Mermaid example is intentionally simplified. Use a drawing tool (draw.io / diagrams.net, Lucidchart) to create a higher-fidelity diagram with bounding boxes, icons, and file mappings.
+## Component Mapping
 
-## Exporting and sharing
-- Use draw.io / diagrams.net (free) or Lucidchart/Figma for visually-rich diagrams.
-- For quick text-driven diagrams, use Mermaid embedded in Markdown (GitHub supports Mermaid in some contexts) or PlantUML for UML-style deployment diagrams. Export to PNG/SVG for slides or documentation.
+| Diagram Element | Source Code | Key Files |
+|-----------------|-------------|-----------|
+| Frontend | `frontend/` | `src/App.tsx`, `src/auth/AuthProvider.tsx` |
+| Orchestrator | `orchestrator/` | `src/index.ts`, `prisma/schema.prisma` |
+| Init Service | `init-service/` | `src/index.ts`, `src/aws.ts` |
+| Runner | `runner/` | `src/index.ts`, `src/ws.ts`, `src/pty.ts`, `Dockerfile` |
+| Ingress | `k8s/` | `ingress-controller.yaml` |
+| K8s Manifests | `orchestrator/` | `service.yaml`, `service.yaml.example` |
+| K8s Secrets | `k8s/` | `runner-secrets.yaml` |
 
-## Verification checklist (before finalizing diagram)
-- [ ] All runtime components are represented (init-service, orchestrator, runner, frontend).
-- [ ] Ports and protocols are labeled on edges.
-- [ ] Public vs private boundaries are clear (ingress vs ClusterIP).
-- [ ] External dependencies (S3, Registry, CI) are shown and their access patterns are annotated.
-- [ ] Kubernetes objects (Ingress, Service, Deployment, PVC) are mapped to file paths where the manifests live.
-- [ ] Security notes: service accounts, secrets, TLS boundaries, and IAM roles are called out.
-- [ ] Diagram file is saved into the repository docs folder or root (e.g., `docs/architecture/`), and a small README references it.
+## Network Boundaries
 
-## Where to put the final diagram file in this repo
-- Suggested path: `d:\My Codes\Syncode\docs\architecture\deployment-diagram.{drawio|png|svg|md}`
-- Keep a source format (drawio or Figma) and an exported PNG/SVG for easy consumption.
+### Public (via Ingress)
+- `*.iluvcats.me` → Runner WebSocket (port 3001)
+- `*.catclub.tech` → Runner user app (port 3000)
+- Frontend (static hosting or dev server)
 
-## Suggested next steps (optional)
-1. Create a `docs/architecture` folder and add this diagram and a short `README.md` explaining how to regenerate it.
-2. If you want, I can generate a PlantUML or a more detailed Mermaid deployment example that includes the real port numbers and file paths from this repo.
-3. Review with the DevOps team to confirm service account and ingress/TLS details; update diagram accordingly.
+### Internal (ClusterIP)
+- Orchestrator → K8s API server
+- Init Service → S3
+- InitContainer → S3
 
----
+### External APIs
+- Frontend → Auth0 (OAuth2 PKCE flow)
+- Orchestrator → Auth0 (JWT validation)
+- Orchestrator → MongoDB Atlas (Prisma)
 
-If you want, I can now:
-- Save this as `d:\My Codes\Syncode\DEPLOYMENT_DIAGRAM.md` (done), or
-- Also create a `docs/architecture/` folder and add a high-fidelity `deployment-diagram.drawio` or `deployment-diagram.png` placeholder, or
-- Produce a PlantUML source version of the same diagram for offline rendering.
+## Ports & Protocols
 
-Tell me which of those follow-ups to do next.
+| Connection | Protocol | Port |
+|------------|----------|------|
+| Frontend → Orchestrator | HTTPS / HTTP | 3002 |
+| Frontend → Runner (terminal/files) | WSS / WS | 3001 |
+| Frontend → Runner (app preview) | HTTPS / HTTP | 3000 |
+| Orchestrator → MongoDB | MongoDB protocol | 27017 |
+| Init Service → S3 | HTTPS | 443 |
+| InitContainer → S3 | HTTPS | 443 |
+
+## Security Notes
+
+- **Auth0 JWT** protects all Orchestrator API routes
+- **K8s Secrets** store AWS credentials for runner pods (not hardcoded)
+- **IRSA** recommended in production (IAM Roles for Service Accounts)
+- **TLS** should be terminated at the Ingress level
+- **Network Policies** restrict pod-to-pod communication
+- **Resource Limits** should be set on runner pods to prevent abuse

@@ -1,152 +1,150 @@
-# SYNCODE - CLOUD IDE PLATFORM - ACTIVITY DIAGRAM (SIMPLIFIED)
+# Syncode — Activity Diagram
 
-## TEXTUAL DESCRIPTION FOR DIAGRAM CREATION
+## Swimlanes
 
----
-
-## SWIMLANES (Actors/Systems):
-1. **User** - The person using the IDE
-2. **Frontend** - React application
-3. **Init-Service** - Project setup (Port 3001)
-4. **Orchestrator** - K8s manager (Port 3002)
-5. **Runner Pod** - Coding environment + WebSocket
+1. **User** — person using the IDE
+2. **Frontend** — React SPA with Auth0
+3. **Auth0** — identity provider
+4. **Orchestrator** — API server (Port 3002)
+5. **Init Service** — S3 template copier (Port 3001)
+6. **Runner Pod** — coding environment + WebSocket
 
 ---
 
-## MAIN WORKFLOW:
+## 1. Authentication
 
-**Start:** User on Landing Page
+**User:**
+- Visit landing page → Click "Log In"
 
-### 1. PROJECT CREATION
+**Frontend:**
+- Redirect to Auth0 login page
 
-**User Swimlane:**
-- Action: Enter Project ID and select Language
-- Action: Click "Create Project"
+**Auth0:**
+- User authenticates (email/password or social)
+- Return JWT access token + redirect to frontend
 
-**Frontend Swimlane:**
-- Action: POST to Init-Service `/project` { replId, language }
+**Frontend:**
+- Receive token → POST `/verify-user` to Orchestrator with `{ email, name, picture }`
 
-**Init-Service Swimlane:**
-- Decision: "replId valid?"
-  - NO → Error 400
-  - YES → Copy S3 template `base/{language}` → `code/{replId}`
-- Action: Return "Project created"
+**Orchestrator:**
+- Find or create User in MongoDB
+- Return user profile
 
-**Frontend Swimlane:**
-- Action: Navigate to `/coding?replId={replId}`
+**Frontend:**
+- Navigate to Dashboard
 
 ---
 
-### 2. ENVIRONMENT SETUP
+## 2. Project Creation
 
-**Frontend Swimlane:**
-- Action: POST to Orchestrator `/start` { replId }
+**User:**
+- On Dashboard → Enter project name, select language → Click "Create"
 
-**Orchestrator Swimlane:**
-- Action: Read and parse service.yaml
-- **Fork:** Create K8s resources in parallel
-  - Create Deployment (with init container for S3 copy)
-  - Create Service (ports 3000, 3001)
-  - Create Ingress (routes to domains)
-- **Join:** All resources created
-- Action: Return success
+**Frontend:**
+- POST `/projects` to Orchestrator `{ replId, language, name }`
+
+**Orchestrator:**
+- Validate JWT auth
+- Create Project record in MongoDB (linked to User)
+- Call Init Service to copy S3 template
+- Create K8s Deployment, Service, Ingress
+- Wait for pod to be ready
+- Return project data
+
+**Init Service:**
+- Copy S3 template `base/{language}` → `code/{replId}`
 
 **Runner Pod:**
-- Action: Init container copies files from S3 → /workspace
-- Action: Main container starts WebSocket server (port 3001)
+- initContainer copies files from S3 → `/workspace`
+- Main container starts WebSocket server (port 3001)
+
+**Frontend:**
+- Navigate to `/coding?replId={replId}`
 
 ---
 
-### 3. CONNECT & CODE
+## 3. Coding Session
 
-**Frontend Swimlane:**
-- Action: Connect WebSocket to `{replId}.iluvcats.me`
-- Action: Emit "requestTerminal"
+**Frontend:**
+- Connect WebSocket to `{replId}.iluvcats.me`
+- Emit `requestTerminal`
 
-**Runner Pod Swimlane:**
-- Action: Create PTY terminal
-- Action: Load file tree from /workspace
-- Action: Send file structure to Frontend
+**Runner Pod:**
+- Create PTY terminal (bash/sh)
+- Load file tree from `/workspace`
+- Send file structure to Frontend
 
-**Frontend Swimlane:**
-- Action: Render Editor with file tree and terminal
+**Frontend:**
+- Render IDE: file tree + editor + terminal + preview
 
-**[Active Coding Loop - Parallel Operations]:**
-- **File Edit:** User edits → Frontend sends updates → Runner saves to disk → Backup to S3
-- **Terminal:** User types commands → Runner executes → Output streams back
-- **Preview:** Frontend loads app preview via iframe
-
----
-
-### 4. STOP ENVIRONMENT
-
-**User Swimlane:**
-- Action: Click "Stop" button
-- Decision: "Confirm stop?"
-  - NO → Return to coding
-  - YES → Continue
-
-**Frontend Swimlane:**
-- Action: POST to Orchestrator `/stop` { replId }
-
-**Orchestrator Swimlane:**
-- **Fork:** Delete K8s resources in parallel
-  - Delete Deployment
-  - Delete Service
-  - Delete Ingress
-- **Join:** All deleted
-- Action: Return success
-
-**Frontend Swimlane:**
-- Action: Navigate to Landing Page
-
-**End:** User back on Landing Page
+**Active Coding Loop (parallel operations):**
+- **File Edit:** User edits → Frontend sends `updateContent` → Runner saves to disk
+- **Terminal:** User types → `terminal:write` → Runner executes → `terminal:data` streams back
+- **Preview:** Frontend loads app preview iframe via `{replId}.catclub.tech`
 
 ---
 
-## KEY DECISION POINTS:
-1. **Is replId valid?** (Init-Service validation)
-2. **Resource exists?** (Skip if already created)
-3. **User confirms stop?** (Confirmation dialog)
+## 4. Collaboration (Optional)
+
+**User:**
+- Open project settings → Enter collaborator email
+
+**Frontend:**
+- POST `/projects/:replId/collaborators` `{ email }`
+
+**Orchestrator:**
+- Look up user by email in MongoDB
+- Create ProjectCollaborator record
+- Return updated project
 
 ---
 
-## PARALLEL FLOWS:
-1. **K8s Resource Creation:** Deployment + Service + Ingress created simultaneously
-2. **Active Coding:** File operations, terminal commands, and preview happen concurrently
-3. **Resource Deletion:** All K8s resources deleted in parallel
+## 5. Fork Project (Optional)
+
+**User:**
+- View a public project → Click "Fork"
+
+**Frontend:**
+- POST `/projects/:replId/fork`
+
+**Orchestrator:**
+- Copy S3 folder `code/{sourceReplId}` → `code/{newReplId}`
+- Create new Project record with `forkedFromReplId`
+- Return forked project
 
 ---
 
-## DIAGRAM ELEMENTS:
+## 6. Stop Environment
 
-**Shapes:**
-- **Rounded Rectangle** = Action/Activity
-- **Diamond** = Decision point
-- **Thick Bar** = Fork/Join (parallel flows)
-- **Circle** = Start/End node
+**User:**
+- Click "Stop" button → Confirm
 
-**Arrows:**
-- **Solid Arrow** = Normal flow
-- **Dashed Arrow** = Async operation
+**Frontend:**
+- POST `/stop` `{ replId }`
 
-**Layout:**
-- 5 vertical swimlanes (User | Frontend | Init-Service | Orchestrator | Runner Pod)
-- Top to bottom flow
-- Color each phase differently
+**Orchestrator:**
+- Delete K8s Deployment, Service, Ingress
+- Return cleanup results
+
+**Frontend:**
+- Navigate to Dashboard
 
 ---
 
-## SIMPLIFIED FLOW DIAGRAM:
+## Simplified Flow
 
 ```
-[START] → Enter Project Details → Create Project → Copy Template (S3)
-           ↓
-       Navigate to Editor → Boot Environment → Create K8s Resources (FORK)
-           ↓
-       Connect WebSocket → Load Files → Active Coding (LOOP)
-           ↓
-       Stop Button → Confirm? → Delete Resources (FORK) → [END]
+[Auth0 Login] → Verify User → Dashboard
+       ↓
+  Create Project → Copy Template (S3) → Boot K8s Pod (FORK)
+       ↓
+  Connect WebSocket → Load Files → Active Coding (LOOP)
+       ↓
+  Stop → Delete K8s Resources → Dashboard
 ```
 
-This simplified version focuses on the essential workflow without overwhelming detail!
+## Decision Points
+
+1. **User authenticated?** → Required for all actions after landing page
+2. **Has project access?** → Owner or collaborator check
+3. **User confirms stop?** → Confirmation dialog before deletion
