@@ -83,6 +83,9 @@ export const AuthProviderWithHistory = ({ children }: { children: React.ReactNod
         <Auth0Provider
             domain={domain}
             clientId={clientId}
+            cacheLocation="localstorage"
+            useRefreshTokens={true}
+            useRefreshTokensFallback={true}
             authorizationParams={{
                 redirect_uri: window.location.origin,
                 audience: audience,

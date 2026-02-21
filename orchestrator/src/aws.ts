@@ -24,9 +24,10 @@ export const fetchS3Folder = async (key: string, localPath: string): Promise<voi
                 }
                 const data = await s3.getObject(params).promise()
                 if (data.Body) {
-                    const fileData = data.Body
+                    const fileData = Buffer.isBuffer(data.Body)
+                        ? data.Body.toString("utf-8")
+                        : String(data.Body)
                     const filePath = `${localPath}/${fileKey.replace(key, "")}`
-                    //@ts-ignore
                     await writeFile(filePath, fileData)
                 }
             }
@@ -72,11 +73,11 @@ export async function copyS3Folder(sourcePrefix: string, destinationPrefix: stri
     }
 }
 
-function writeFile(filePath: string, fileData: Buffer): Promise<void> {
+function writeFile(filePath: string, fileData: string): Promise<void> {
     return new Promise(async (resolve, reject) => {
         await createFolder(path.dirname(filePath));
 
-        fs.writeFile(filePath, fileData, (err) => {
+        fs.writeFile(filePath, fileData, { encoding: "utf-8" }, (err) => {
             if (err) {
                 reject(err)
             } else {

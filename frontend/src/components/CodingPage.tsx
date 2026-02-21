@@ -6,6 +6,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Output } from './Output';
 import { TerminalComponent as Terminal } from './Terminal';
 import axios from 'axios';
+import { useAuth0 } from '@auth0/auth0-react';
 
 function useSocket(replId: string, enabled: boolean = true) {
     const [socket, setSocket] = useState<Socket | null>(null);
@@ -83,17 +84,48 @@ const ConnectionStatus = ({ connected }: { connected: boolean }) => (
 
 export const CodingPage = () => {
     const [podCreated, setPodCreated] = useState(false);
+    const [bootError, setBootError] = useState<string | null>(null);
+    const [bootAttempt, setBootAttempt] = useState(0);
     const [searchParams] = useSearchParams();
     const replId = searchParams.get('replId') ?? '';
+    const { getAccessTokenSilently } = useAuth0();
     
     const SERVICE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
 
     useEffect(() => {
-        if (replId) {
-            axios.post(`${SERVICE_URL}/start`, { replId })
-                .then(() => setPodCreated(true))
-                .catch((err) => console.error(err));
+        const bootEnvironment = async () => {
+            if (!replId) {
+                setBootError('Missing project identifier.');
+                return;
+            }
+
+            try {
+                setBootError(null);
+                const token = await getAccessTokenSilently();
+                const headers = { Authorization: `Bearer ${token}` };
+
+                await axios.get(`${SERVICE_URL}/projects/${replId}/access`, { headers });
+                const startResponse = await axios.post(`${SERVICE_URL}/start`, { replId }, { headers });
+                if (!startResponse?.data?.ready) {
+                    setBootError('Environment is unavailable right now (Kubernetes is likely down). Please retry later.');
+                    setPodCreated(false);
+                    return;
+                }
+                setPodCreated(true);
+            } catch (error: any) {
+                const status = error?.response?.status;
+                if (status === 403) {
+                    setBootError('You do not have access to this repository.');
+                } else if (status === 404) {
+                    setBootError('Repository not found.');
+                } else {
+                    setBootError('Environment is unavailable right now (Kubernetes is likely down). Please retry later.');
+                }
+                setPodCreated(false);
+            }
         }
+
+        bootEnvironment();
 
         const handleBeforeUnload = () => {
             if (replId) {
@@ -107,7 +139,31 @@ export const CodingPage = () => {
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, [replId]);
+    }, [replId, SERVICE_URL, getAccessTokenSilently, bootAttempt]);
+
+    if (bootError) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen w-screen bg-syncode-black gap-4 px-6">
+                <div className="text-sm text-syncode-gray-300 font-mono tracking-wide text-center max-w-[520px]">
+                    {bootError}
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        className="px-4 py-2 text-[11px] font-normal border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase bg-syncode-black text-white hover:bg-syncode-gray-900"
+                        onClick={() => setBootAttempt((value) => value + 1)}
+                    >
+                        Retry
+                    </button>
+                    <button
+                        className="px-4 py-2 text-[11px] font-normal border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase bg-white text-black"
+                        onClick={() => window.history.back()}
+                    >
+                        Back
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     if (!podCreated) {
         return <LoadingScreen text="Booting your environment..." />;
@@ -127,9 +183,11 @@ export const CodingPagePostPodCreation = () => {
     const [showTerminal, setShowTerminal] = useState(true);
     const [isConnected, setIsConnected] = useState(false);
     const [showStopDialog, setShowStopDialog] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
         if (socket) {
+            setLoadError(null);
             socket.on('connect', () => {
                 setIsConnected(true);
             });
@@ -144,6 +202,14 @@ export const CodingPagePostPodCreation = () => {
             });
         }
     }, [socket]);
+
+    useEffect(() => {
+        if (loaded) return;
+        const timeout = setTimeout(() => {
+            setLoadError('Workspace did not load. The environment may not be running.');
+        }, 20000);
+        return () => clearTimeout(timeout);
+    }, [loaded]);
 
     const SERVICE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
 
@@ -185,6 +251,30 @@ export const CodingPagePostPodCreation = () => {
             });
         }
     };
+
+    if (loadError) {
+        return (
+            <div className="flex flex-col items-center justify-center h-screen w-screen bg-syncode-black gap-4 px-6">
+                <div className="text-sm text-syncode-gray-300 font-mono tracking-wide text-center max-w-[520px]">
+                    {loadError}
+                </div>
+                <div className="flex gap-3">
+                    <button
+                        className="px-4 py-2 text-[11px] font-normal border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase bg-syncode-black text-white hover:bg-syncode-gray-900"
+                        onClick={() => window.location.reload()}
+                    >
+                        Retry
+                    </button>
+                    <button
+                        className="px-4 py-2 text-[11px] font-normal border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase bg-white text-black"
+                        onClick={() => navigate('/dashboard')}
+                    >
+                        Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        );
+    }
     
     if (!loaded) {
         return <LoadingScreen text="Loading workspace..." />;

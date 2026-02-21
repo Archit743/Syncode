@@ -57,7 +57,9 @@ export const Search = () => {
                             />
                             <div>
                                 <h3 className="m-0 mb-1 text-base font-normal">{user.name}</h3>
+                                {user.username && <p className="m-0 text-syncode-gray-400 text-xs">@{user.username}</p>}
                                 <p className="m-0 text-syncode-gray-500 text-xs">{user.email}</p>
+                                {user.bio && <p className="m-0 mt-1 text-syncode-gray-500 text-xs">{user.bio}</p>}
                             </div>
                         </div>
                     ))}

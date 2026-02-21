@@ -81,9 +81,10 @@ export const Landing = () => {
       const headers = { Authorization: `Bearer ${token}` };
       await axios.post(`${SERVICE_URL}/projects`, { replId, language, name: replId }, { headers });
       navigate(`/coding/?replId=${replId}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to create project:', error);
-      alert("An error occurred. Please try again.");
+      const message = error?.response?.data || error?.message || "Project creation failed. Please try again.";
+      alert(String(message));
       setLoading(false);
     }
   };
