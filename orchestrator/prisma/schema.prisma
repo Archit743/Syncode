@@ -18,6 +18,10 @@ model User {
   avatarUrl String?
   projects  Project[]
   sharedProjects ProjectCollaborator[]
+  sentRequests     CollaborationRequest[] @relation("SentRequests")
+  receivedRequests CollaborationRequest[] @relation("ReceivedRequests")
+  notifications    Notification[]
+  snapshots        Snapshot[]             @relation("Snapshots")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -32,6 +36,8 @@ model Project {
   userId    String   @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
   collaborators ProjectCollaborator[]
+  collaborationRequests CollaborationRequest[]
+  snapshots  Snapshot[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -45,4 +51,41 @@ model ProjectCollaborator {
   createdAt DateTime @default(now())
 
   @@unique([projectId, userId])
+}
+
+model CollaborationRequest {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId   String   @db.ObjectId
+  project     Project  @relation(fields: [projectId], references: [id])
+  senderId    String   @db.ObjectId
+  sender      User     @relation("SentRequests", fields: [senderId], references: [id])
+  receiverId  String   @db.ObjectId
+  receiver    User     @relation("ReceivedRequests", fields: [receiverId], references: [id])
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([projectId, receiverId])
+}
+
+model Notification {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  message   String
+  metadata  String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Snapshot {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  projectId String   @db.ObjectId
+  project   Project  @relation(fields: [projectId], references: [id])
+  userId    String   @db.ObjectId
+  user      User     @relation("Snapshots", fields: [userId], references: [id])
+  label     String?
+  files     Json
+  createdAt DateTime @default(now())
 }

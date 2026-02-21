@@ -26,6 +26,7 @@
   --animate-fade-in: fadeIn 0.8s ease-out;
   --animate-glow-fade: glowFade 2.5s ease-out forwards;
   --animate-grid-glow: gridGlow 0.5s ease-out forwards;
+  --animate-slide-in-right: slideInRight 0.25s ease-out;
 }
 
 @keyframes spin {
@@ -54,6 +55,11 @@
 @keyframes gridGlow {
   0% { color: #ffffff; text-shadow: 0 0 20px rgba(255, 255, 255, 1), 0 0 40px rgba(255, 255, 255, 0.7); transform: scale(1.15); }
   100% { color: #666666; text-shadow: none; transform: scale(1); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 body {

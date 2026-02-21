@@ -7,6 +7,7 @@ import { Output } from './Output';
 import { TerminalComponent as Terminal } from './Terminal';
 import axios from 'axios';
 import { useAuth0 } from '@auth0/auth0-react';
+import { SnapshotPanel } from './SnapshotPanel';
 
 function useSocket(replId: string, enabled: boolean = true) {
     const [socket, setSocket] = useState<Socket | null>(null);
@@ -25,7 +26,7 @@ function useSocket(replId: string, enabled: boolean = true) {
             timeout: 20000,
             autoConnect: true,
         });
-        
+
         newSocket.on('connect', () => {
             // Connection successful - silent
         });
@@ -62,11 +63,10 @@ const LoadingScreen = ({ text }: { text: string }) => (
 const ToggleButton = ({ active, onClick, children }: { active?: boolean; onClick: () => void; children: React.ReactNode }) => (
     <button
         onClick={onClick}
-        className={`px-4 py-2 text-[11px] font-normal border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase active:scale-[0.98] ${
-            active 
-                ? 'bg-white text-black hover:bg-white' 
+        className={`px-4 py-2 text-[11px] font-normal border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase active:scale-[0.98] ${active
+                ? 'bg-white text-black hover:bg-white'
                 : 'bg-syncode-black text-white hover:bg-syncode-gray-900'
-        }`}
+            }`}
     >
         {children}
     </button>
@@ -75,8 +75,8 @@ const ToggleButton = ({ active, onClick, children }: { active?: boolean; onClick
 // Connection status indicator
 const ConnectionStatus = ({ connected }: { connected: boolean }) => (
     <div className={`flex items-center gap-2 text-[10px] tracking-wide font-mono uppercase ${connected ? 'text-white' : 'text-syncode-gray-300'}`}>
-        <span 
-            className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-syncode-gray-500'}`} 
+        <span
+            className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'bg-syncode-gray-500'}`}
         />
         {connected ? 'Connected' : 'Connecting...'}
     </div>
@@ -89,7 +89,7 @@ export const CodingPage = () => {
     const [searchParams] = useSearchParams();
     const replId = searchParams.get('replId') ?? '';
     const { getAccessTokenSilently } = useAuth0();
-    
+
     const SERVICE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002';
 
     useEffect(() => {
@@ -184,6 +184,7 @@ export const CodingPagePostPodCreation = () => {
     const [isConnected, setIsConnected] = useState(false);
     const [showStopDialog, setShowStopDialog] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [showSnapshots, setShowSnapshots] = useState(false);
 
     useEffect(() => {
         if (socket) {
@@ -196,7 +197,7 @@ export const CodingPagePostPodCreation = () => {
                 setIsConnected(false);
             });
 
-            socket.on('loaded', ({ rootContent }: { rootContent: RemoteFile[]}) => {
+            socket.on('loaded', ({ rootContent }: { rootContent: RemoteFile[] }) => {
                 setLoaded(true);
                 setFileStructure(rootContent);
             });
@@ -234,12 +235,12 @@ export const CodingPagePostPodCreation = () => {
 
     const onSelect = (file: File) => {
         if (!file) return;
-        
+
         if (file.type === Type.DIRECTORY) {
             socket?.emit("fetchDir", file.path, (data: RemoteFile[]) => {
                 setFileStructure(prev => {
                     const allFiles = [...prev, ...data];
-                    return allFiles.filter((file, index, self) => 
+                    return allFiles.filter((file, index, self) =>
                         index === self.findIndex(f => f.path === file.path)
                     );
                 });
@@ -275,7 +276,7 @@ export const CodingPagePostPodCreation = () => {
             </div>
         );
     }
-    
+
     if (!loaded) {
         return <LoadingScreen text="Loading workspace..." />;
     }
@@ -301,6 +302,9 @@ export const CodingPagePostPodCreation = () => {
                     <ToggleButton onClick={() => setShowStopDialog(true)}>
                         ⏹ Stop
                     </ToggleButton>
+                    <ToggleButton active={showSnapshots} onClick={() => setShowSnapshots(!showSnapshots)}>
+                        📸 Snapshots
+                    </ToggleButton>
                 </div>
             </div>
 
@@ -309,7 +313,7 @@ export const CodingPagePostPodCreation = () => {
                 <div className="flex-1 min-w-0 flex flex-col border-r border-syncode-gray-700 bg-syncode-black overflow-hidden">
                     <Editor socket={socket!} selectedFile={selectedFile} onSelect={onSelect} files={fileStructure} />
                 </div>
-                <div 
+                <div
                     className="flex-1 min-w-0 flex flex-col bg-syncode-black overflow-hidden"
                     style={{ display: (showOutput || showTerminal) ? 'flex' : 'none' }}
                 >
@@ -317,14 +321,14 @@ export const CodingPagePostPodCreation = () => {
                     <Terminal socket={socket!} isVisible={showTerminal} />
                 </div>
             </div>
-            
+
             {/* Stop Dialog */}
             {showStopDialog && (
-                <div 
+                <div
                     className="fixed inset-0 bg-black/80 flex items-center justify-center z-[1000] backdrop-blur-sm"
                     onClick={() => setShowStopDialog(false)}
                 >
-                    <div 
+                    <div
                         className="bg-syncode-black border-2 border-white p-8 max-w-[480px] w-[90%] flex flex-col gap-6"
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -332,17 +336,17 @@ export const CodingPagePostPodCreation = () => {
                             Stop Environment?
                         </h2>
                         <p className="text-xs text-syncode-gray-300 m-0 leading-relaxed tracking-wide font-mono">
-                            Are you sure you want to stop and cleanup this environment? 
+                            Are you sure you want to stop and cleanup this environment?
                             All unsaved changes will be lost and the environment will be terminated.
                         </p>
                         <div className="flex gap-3 justify-end">
-                            <button 
+                            <button
                                 className="px-5 py-2.5 text-[11px] font-normal bg-syncode-black text-white border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase hover:bg-syncode-gray-900 hover:scale-[1.02] active:scale-[0.98]"
                                 onClick={() => setShowStopDialog(false)}
                             >
                                 Cancel
                             </button>
-                            <button 
+                            <button
                                 className="px-5 py-2.5 text-[11px] font-normal bg-white text-black border border-white cursor-pointer transition-all duration-200 tracking-widest font-mono uppercase hover:scale-[1.02] active:scale-[0.98]"
                                 onClick={handleStopEnvironment}
                             >
@@ -352,6 +356,13 @@ export const CodingPagePostPodCreation = () => {
                     </div>
                 </div>
             )}
+
+            {/* Snapshot Panel */}
+            <SnapshotPanel
+                replId={replId}
+                isOpen={showSnapshots}
+                onClose={() => setShowSnapshots(false)}
+            />
         </div>
     );
 }

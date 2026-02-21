@@ -149,7 +149,7 @@ export const Dashboard = () => {
     setCollaboratorBusy(project.id);
     try {
       const token = await getAccessTokenSilently();
-      const response = await axios.post(
+      await axios.post(
         `${apiUrl}/projects/${project.replId}/collaborators`,
         { email },
         {
@@ -158,11 +158,12 @@ export const Dashboard = () => {
           }
         }
       );
-      updateProjectInState(response.data);
+      alert("Invitation sent!");
       setCollaboratorInput((prev) => ({ ...prev, [project.id]: "" }));
-    } catch (error) {
-      console.error("Failed to add collaborator", error);
-      alert("Could not add collaborator.");
+    } catch (error: any) {
+      console.error("Failed to send invitation", error);
+      const msg = error?.response?.data || "Could not send invitation.";
+      alert(msg);
     } finally {
       setCollaboratorBusy(null);
     }
@@ -242,7 +243,7 @@ export const Dashboard = () => {
       <div className="p-10 max-w-[1200px] mx-auto">
         <div className="flex justify-between items-center mb-10 border-b border-syncode-gray-700 pb-5">
           <h1 className="text-2xl font-normal tracking-widest uppercase m-0">My Projects</h1>
-          <button 
+          <button
             className="bg-white text-black border-none px-5 py-2.5 cursor-pointer uppercase font-mono text-xs tracking-wide transition-all duration-200 rounded hover:bg-syncode-gray-200 hover:-translate-y-0.5"
             onClick={() => navigate('/')}
           >
@@ -252,7 +253,7 @@ export const Dashboard = () => {
 
         <div className="flex flex-wrap gap-3 mb-6">
           <select
-            className="bg-syncode-dark border border-syncode-gray-700 text-white px-3 py-2 text-xs uppercase tracking-wide font-mono"
+            className="bg-syncode-dark border border-syncode-gray-700 text-white px-3 py-2 text-xs uppercase tracking-wide font-mono rounded"
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value as "newest" | "oldest" | "name")}
           >
@@ -261,7 +262,7 @@ export const Dashboard = () => {
             <option value="name">Sort: Name</option>
           </select>
           <select
-            className="bg-syncode-dark border border-syncode-gray-700 text-white px-3 py-2 text-xs uppercase tracking-wide font-mono"
+            className="bg-syncode-dark border border-syncode-gray-700 text-white px-3 py-2 text-xs uppercase tracking-wide font-mono rounded"
             value={visibilityFilter}
             onChange={(event) => setVisibilityFilter(event.target.value as "all" | "public" | "private")}
           >
@@ -270,7 +271,7 @@ export const Dashboard = () => {
             <option value="private">Visibility: Private</option>
           </select>
           <select
-            className="bg-syncode-dark border border-syncode-gray-700 text-white px-3 py-2 text-xs uppercase tracking-wide font-mono"
+            className="bg-syncode-dark border border-syncode-gray-700 text-white px-3 py-2 text-xs uppercase tracking-wide font-mono rounded"
             value={roleFilter}
             onChange={(event) => setRoleFilter(event.target.value as "all" | "owner" | "collaborator")}
           >
@@ -279,7 +280,7 @@ export const Dashboard = () => {
             <option value="collaborator">Role: Collaborator</option>
           </select>
           <select
-            className="bg-syncode-dark border border-syncode-gray-700 text-white px-3 py-2 text-xs uppercase tracking-wide font-mono"
+            className="bg-syncode-dark border border-syncode-gray-700 text-white px-3 py-2 text-xs uppercase tracking-wide font-mono rounded"
             value={languageFilter}
             onChange={(event) => setLanguageFilter(event.target.value)}
           >
@@ -293,8 +294,8 @@ export const Dashboard = () => {
 
         <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-5">
           {filteredAndSortedProjects.map((project) => (
-            <div 
-              key={project.id} 
+            <div
+              key={project.id}
               className="bg-syncode-dark border border-syncode-gray-700 p-5 rounded-lg cursor-pointer transition-all duration-200 hover:border-white hover:-translate-y-0.5"
               onClick={() => navigate(`/coding/?replId=${project.replId}`)}
             >
@@ -363,14 +364,14 @@ export const Dashboard = () => {
                       value={collaboratorInput[project.id] || ""}
                       onChange={(e) => setCollaboratorInput((prev) => ({ ...prev, [project.id]: e.target.value }))}
                       placeholder="Collaborator email"
-                      className="flex-1 p-2 bg-syncode-black border border-syncode-gray-700 text-white font-mono text-[11px] focus:outline-none focus:border-white"
+                      className="flex-1 p-2 bg-syncode-black border border-syncode-gray-700 text-white font-mono text-[11px] rounded focus:outline-none focus:border-white"
                     />
                     <button
                       className="bg-transparent border border-syncode-gray-600 text-syncode-gray-300 px-2 py-1 cursor-pointer uppercase font-mono text-[10px] tracking-wide transition-all duration-200 hover:border-white hover:text-white"
                       onClick={(e) => handleAddCollaborator(project, e)}
                       disabled={collaboratorBusy === project.id}
                     >
-                      {collaboratorBusy === project.id ? "Saving..." : "Add"}
+                      {collaboratorBusy === project.id ? "Sending..." : "Invite"}
                     </button>
                   </div>
                 </>

@@ -92,7 +92,7 @@ export const Profile = () => {
       </div>
     );
   }
-  
+
   if (!isAuthenticated) {
     return (
       <div className="flex justify-center items-center h-screen bg-syncode-black text-syncode-gray-500 font-mono">
@@ -256,25 +256,25 @@ export const Profile = () => {
     <div className="bg-syncode-dark border border-syncode-gray-700 p-5 rounded-xl flex flex-col gap-3">
       <h2 className="text-sm uppercase tracking-wider m-0">Edit Profile</h2>
       <input
-        className="p-2.5 bg-syncode-black border border-syncode-gray-700 text-white font-mono text-sm focus:outline-none focus:border-white"
+        className="p-2.5 bg-syncode-black border border-syncode-gray-700 text-white font-mono text-sm rounded-lg focus:outline-none focus:border-white"
         placeholder="Name"
         value={formState.name}
         onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
       />
       <input
-        className="p-2.5 bg-syncode-black border border-syncode-gray-700 text-white font-mono text-sm focus:outline-none focus:border-white"
+        className="p-2.5 bg-syncode-black border border-syncode-gray-700 text-white font-mono text-sm rounded-lg focus:outline-none focus:border-white"
         placeholder="Username"
         value={formState.username}
         onChange={(event) => setFormState((prev) => ({ ...prev, username: event.target.value }))}
       />
       <input
-        className="p-2.5 bg-syncode-black border border-syncode-gray-700 text-white font-mono text-sm focus:outline-none focus:border-white"
+        className="p-2.5 bg-syncode-black border border-syncode-gray-700 text-white font-mono text-sm rounded-lg focus:outline-none focus:border-white"
         placeholder="Website"
         value={formState.website}
         onChange={(event) => setFormState((prev) => ({ ...prev, website: event.target.value }))}
       />
       <textarea
-        className="p-2.5 min-h-[110px] bg-syncode-black border border-syncode-gray-700 text-white font-mono text-sm focus:outline-none focus:border-white"
+        className="p-2.5 min-h-[110px] bg-syncode-black border border-syncode-gray-700 text-white font-mono text-sm rounded-lg focus:outline-none focus:border-white"
         placeholder="About"
         value={formState.bio}
         onChange={(event) => setFormState((prev) => ({ ...prev, bio: event.target.value }))}
@@ -300,39 +300,36 @@ export const Profile = () => {
           className="flex items-center gap-2 text-syncode-gray-300 hover:text-white transition-colors duration-200 bg-transparent border-none cursor-pointer font-mono text-sm tracking-wide mb-6"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
+            <path d="M19 12H5M12 19l-7-7 7-7" />
           </svg>
           Back
         </button>
         <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-6 items-start">
           <aside className="bg-syncode-dark border border-syncode-gray-700 rounded-xl p-3 flex flex-col gap-2">
             <button
-              className={`text-left px-3 py-2.5 text-xs uppercase tracking-wide border cursor-pointer transition-all duration-200 ${
-                activeSection === "profile"
-                  ? "border-white text-white bg-syncode-black"
-                  : "border-syncode-gray-700 text-syncode-gray-300 bg-transparent hover:border-white hover:text-white"
-              }`}
+              className={`text-left px-3 py-2.5 text-xs uppercase tracking-wide border cursor-pointer transition-all duration-200 ${activeSection === "profile"
+                ? "border-white text-white bg-syncode-black"
+                : "border-syncode-gray-700 text-syncode-gray-300 bg-transparent hover:border-white hover:text-white"
+                }`}
               onClick={() => setActiveSection("profile")}
             >
               Profile
             </button>
             <button
-              className={`text-left px-3 py-2.5 text-xs uppercase tracking-wide border cursor-pointer transition-all duration-200 ${
-                activeSection === "projects"
-                  ? "border-white text-white bg-syncode-black"
-                  : "border-syncode-gray-700 text-syncode-gray-300 bg-transparent hover:border-white hover:text-white"
-              }`}
+              className={`text-left px-3 py-2.5 text-xs uppercase tracking-wide border cursor-pointer transition-all duration-200 ${activeSection === "projects"
+                ? "border-white text-white bg-syncode-black"
+                : "border-syncode-gray-700 text-syncode-gray-300 bg-transparent hover:border-white hover:text-white"
+                }`}
               onClick={() => setActiveSection("projects")}
             >
               Projects
             </button>
             {isOwnProfile && (
               <button
-                className={`text-left px-3 py-2.5 text-xs uppercase tracking-wide border cursor-pointer transition-all duration-200 ${
-                  activeSection === "edit"
-                    ? "border-white text-white bg-syncode-black"
-                    : "border-syncode-gray-700 text-syncode-gray-300 bg-transparent hover:border-white hover:text-white"
-                }`}
+                className={`text-left px-3 py-2.5 text-xs uppercase tracking-wide border cursor-pointer transition-all duration-200 ${activeSection === "edit"
+                  ? "border-white text-white bg-syncode-black"
+                  : "border-syncode-gray-700 text-syncode-gray-300 bg-transparent hover:border-white hover:text-white"
+                  }`}
                 onClick={() => setActiveSection("edit")}
               >
                 Edit Profile
