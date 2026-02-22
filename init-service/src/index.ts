@@ -44,6 +44,26 @@ app.post("/project", async (req, res) => {
     }
 });
 
+app.post("/copy", async (req, res) => {
+    const { sourceReplId, destinationReplId } = req.body;
+
+    if (!sourceReplId || !destinationReplId) {
+        res.status(400).send("sourceReplId and destinationReplId are required");
+        return;
+    }
+
+    console.log(`Copying project files from ${sourceReplId} to ${destinationReplId}`);
+
+    try {
+        await copyS3Folder(`code/${sourceReplId}`, `code/${destinationReplId}`);
+        console.log(`Project ${destinationReplId} forked from ${sourceReplId} successfully`);
+        res.send("Project copied");
+    } catch (error) {
+        console.error(`Failed to copy project ${sourceReplId} to ${destinationReplId}:`, error);
+        res.status(500).send("Failed to copy project files");
+    }
+});
+
 // Snapshot data: returns current versionId for every file in a project
 app.get("/snapshot-data", async (req, res) => {
     const replId = req.query.replId as string;

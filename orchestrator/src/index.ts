@@ -55,10 +55,16 @@ const buildForkReplId = (sourceReplId: string) => {
     return `${sourceReplId}-fork-${suffix}`;
 };
 
-const canAccessProject = (project: any, currentUserId: string | null) => {
+const canViewProject = (project: any, currentUserId: string | null) => {
     if (!project) return false;
     if (project.visibility === "public") return true;
     if (!currentUserId) return false;
+    if (project.userId === currentUserId) return true;
+    return project.collaborators.some((entry: any) => entry.userId === currentUserId);
+};
+
+const canEditProject = (project: any, currentUserId: string | null) => {
+    if (!project || !currentUserId) return false;
     if (project.userId === currentUserId) return true;
     return project.collaborators.some((entry: any) => entry.userId === currentUserId);
 };
@@ -314,7 +320,7 @@ app.post("/projects/:replId/fork", checkJwt, async (req, res) => {
         const forkingUser = await prisma.user.findUnique({ where: { auth0Id } });
         if (!forkingUser) return res.status(404).send("User not found");
 
-        const canFork = canAccessProject(sourceProject, forkingUser.id);
+        const canFork = canViewProject(sourceProject, forkingUser.id);
         if (!canFork) return res.status(403).send("Cannot fork this project");
 
         const targetReplId = (newReplId?.trim() || buildForkReplId(replId)).toLowerCase();
@@ -322,7 +328,10 @@ app.post("/projects/:replId/fork", checkJwt, async (req, res) => {
         if (existing) return res.status(400).send("Fork project ID already exists");
 
         try {
-            await axios.post("http://localhost:3001/project", { replId: targetReplId, language: sourceProject.language });
+            await axios.post("http://localhost:3001/copy", {
+                sourceReplId: replId,
+                destinationReplId: targetReplId
+            });
         } catch (err) {
             console.error("Fork init service failed:", err);
             return res.status(502).send("Failed to initialize fork project files");
@@ -358,7 +367,7 @@ app.get("/projects/:replId/access", checkJwt, async (req, res) => {
             return res.status(404).send("Project not found");
         }
 
-        const allowed = canAccessProject(project, currentUser?.id ?? null);
+        const allowed = canEditProject(project, currentUser?.id ?? null);
         if (!allowed) {
             return res.status(403).send("Access denied");
         }
@@ -534,7 +543,7 @@ app.post("/start", checkJwt, async (req, res) => {
             return res.status(404).send({ message: "Project not found" });
         }
 
-        const allowed = canAccessProject(project, currentUser?.id ?? null);
+        const allowed = canEditProject(project, currentUser?.id ?? null);
         if (!allowed) {
             return res.status(403).send({ message: "Access denied" });
         }
@@ -938,7 +947,7 @@ app.get("/projects/:replId/snapshots", checkJwt, async (req, res) => {
         const project = await getProjectWithRelations(replId);
         if (!project) return res.status(404).send("Project not found");
 
-        const allowed = canAccessProject(project, user?.id ?? null);
+        const allowed = canViewProject(project, user?.id ?? null);
         if (!allowed) return res.status(403).send("Access denied");
 
         const snapshots = await prisma.snapshot.findMany({
@@ -964,7 +973,7 @@ app.post("/projects/:replId/snapshots", checkJwt, async (req, res) => {
         const project = await getProjectWithRelations(replId);
         if (!project) return res.status(404).send("Project not found");
 
-        const allowed = canAccessProject(project, user.id);
+        const allowed = canEditProject(project, user.id);
         if (!allowed) return res.status(403).send("Access denied");
 
         // Fetch current file versions from init service

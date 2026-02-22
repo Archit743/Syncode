@@ -25,14 +25,14 @@ export const Navbar = () => {
                 {isAuthenticated && (
                     <>
                         <a
-                            className={`no-underline text-xs font-normal cursor-pointer tracking-widest uppercase font-mono transition-colors duration-200 hover:text-white ${location.pathname === '/dashboard' ? 'text-white' : 'text-syncode-gray-300'
+                            className={`no-underline text-sm font-normal cursor-pointer tracking-widest uppercase font-mono transition-colors duration-200 hover:text-white ${location.pathname === '/dashboard' ? 'text-white' : 'text-syncode-gray-300'
                                 }`}
                             onClick={() => navigate('/dashboard')}
                         >
                             Dashboard
                         </a>
                         <a
-                            className={`no-underline text-xs font-normal cursor-pointer tracking-widest uppercase font-mono transition-colors duration-200 hover:text-white ${location.pathname === '/search' ? 'text-white' : 'text-syncode-gray-300'
+                            className={`no-underline text-sm font-normal cursor-pointer tracking-widest uppercase font-mono transition-colors duration-200 hover:text-white ${location.pathname === '/search' ? 'text-white' : 'text-syncode-gray-300'
                                 }`}
                             onClick={() => navigate('/search')}
                         >
@@ -56,7 +56,7 @@ export const Navbar = () => {
                             title="View Profile"
                         />
                         <button
-                            className="bg-transparent border border-syncode-gray-700 text-syncode-gray-300 px-3 py-1.5 cursor-pointer uppercase font-mono text-[10px] tracking-wide transition-all duration-200 hover:border-white hover:text-white"
+                            className="bg-transparent border border-syncode-gray-700 text-syncode-gray-300 px-4 py-2 rounded-md cursor-pointer uppercase font-mono text-[12px] tracking-wide transition-all duration-200 hover:border-white hover:text-white"
                             onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
                         >
                             Logout
@@ -64,7 +64,7 @@ export const Navbar = () => {
                     </>
                 ) : (
                     <button
-                        className="bg-syncode-dark text-syncode-gray-200 border border-syncode-gray-700 px-4 py-2 rounded-md cursor-pointer text-xs uppercase tracking-widest font-mono transition-all duration-300 hover:border-syncode-gray-400 hover:text-white hover:brightness-110"
+                        className="bg-transparent text-syncode-gray-300 border border-syncode-gray-700 px-4 py-2 rounded-md cursor-pointer uppercase font-mono text-[12px] tracking-wide transition-all duration-200 hover:border-white hover:text-white"
                         onClick={() => loginWithRedirect()}
                     >
                         Login
