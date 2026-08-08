@@ -1,0 +1,4 @@
+backend/.agent-state/
+workspace/.agent-runs/
+*.pyc
+__pycache__/

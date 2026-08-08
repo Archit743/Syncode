@@ -1,0 +1,21 @@
+Metadata-Version: 2.4
+Name: syncode-agent-service
+Version: 0.1.0
+Requires-Python: >=3.10
+Requires-Dist: fastapi
+Requires-Dist: uvicorn[standard]
+Requires-Dist: langgraph
+Requires-Dist: langchain-core
+Requires-Dist: langchain-groq
+Requires-Dist: langchain-openai
+Requires-Dist: langchain-community
+Requires-Dist: sse-starlette
+Requires-Dist: sqlmodel
+Requires-Dist: pydantic
+Requires-Dist: pydantic-settings
+Requires-Dist: websockets
+Requires-Dist: aiofiles
+Requires-Dist: httpx
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-asyncio; extra == "dev"
